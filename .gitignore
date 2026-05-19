@@ -44,7 +44,6 @@ yarn-error.log*
 
 
 # lock files
-
 yarn.lock
 
 .obsidian
@@ -54,3 +53,6 @@ progressos
 node_modules
 .next
 .env.local
+AGENTS.md
+CLAUDE.md
+SUPABASE_SETUP.md
