@@ -41,8 +41,16 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
 
 # lock files
-package-lock.json
+
 yarn.lock
+
+.obsidian
+.vscode
+ANALISES
+progressos
+node_modules
+.next
+.env.local
