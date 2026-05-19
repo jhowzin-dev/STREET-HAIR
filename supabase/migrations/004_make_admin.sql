@@ -1,0 +1,15 @@
+-- ============================================
+-- PROMOVER USUÁRIO PARA ADMIN
+-- ============================================
+-- Rode esse script para tornar um usuário existente em admin.
+-- Substitua 'SEU_EMAIL_AQUI' pelo email do usuário.
+
+-- Exemplo de como usar:
+-- UPDATE public.profiles
+-- SET role = 'admin'
+-- WHERE id = (
+--   SELECT id FROM auth.users WHERE email = 'SEU_EMAIL_AQUI' LIMIT 1
+-- );
+--
+-- Para verificar se funcionou:
+-- SELECT id, full_name, role FROM public.profiles WHERE role = 'admin';

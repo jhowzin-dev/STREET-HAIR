@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+.next/
+
+# Logs
+*.log
+
+# Environment
+.env.local
+.env
+
+# Misc
+.vscode/
+*.swp
+*.tmp
