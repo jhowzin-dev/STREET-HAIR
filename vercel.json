@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "regions": ["iad1"],
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "facebookexternalhit|twitterbot|linkedinbot|bot"
+        }
+      ],
+      "destination": "/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ],
+  "environments": {
+    "production": {
+      "NEXT_PUBLIC_SITE_URL": "https://streethair.vercel.app"
+    }
+  }
+}
