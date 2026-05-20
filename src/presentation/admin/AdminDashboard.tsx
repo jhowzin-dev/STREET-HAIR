@@ -157,7 +157,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange }: Appointment
           </div>
           <div>
             <p className="text-white font-medium text-sm">
-              {appointment.client_name || "Cliente sem nome"}
+             {(appointment as any).client_name || "Cliente sem nome"}
             </p>
             <p className="text-white/40 text-xs">{appointment.services.join(", ")}</p>
           </div>
@@ -216,7 +216,7 @@ function CompactAppointmentRow({ appointment }: CompactAppointmentRowProps) {
           </div>
           <div>
             <p className="text-white text-sm font-medium">
-              {appointment.client_name || "Cliente sem nome"}{" "}
+              {(appointment as any).client_name || "Cliente sem nome"}{" "}
               <span className="text-white/40 text-xs font-normal ml-1">
                 • {appointment.appointment_time}
               </span>

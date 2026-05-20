@@ -58,7 +58,7 @@ export interface Appointment {
   cancellation_reason?: string | null
   professional?: Professional | null
   professional_name?: string | null
-  client_name: string;
+  client_name?: string | null
 }
 
 export interface NotificationPreferences {
