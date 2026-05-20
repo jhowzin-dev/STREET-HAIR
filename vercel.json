@@ -31,10 +31,5 @@
         }
       ]
     }
-  ],
-  "environments": {
-    "production": {
-      "NEXT_PUBLIC_SITE_URL": "https://streethair.vercel.app"
-    }
-  }
+  ]
 }
