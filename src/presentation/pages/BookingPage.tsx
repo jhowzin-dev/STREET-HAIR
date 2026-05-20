@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { format } from "date-fns"
+import { useState, useEffect, useRef, useMemo } from "react"
+import { format, startOfDay, addDays, isToday, isBefore } from "date-fns"
 import { User, PlusCircle, CalendarDays, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
@@ -15,7 +15,6 @@ import { createAppointment, getBookedSlots } from "@/lib/actions/appointments"
 import { getProfessionals } from "@/lib/actions/professionals"
 import { getServices } from "@/lib/actions/services"
 import type { Professional, Service } from "@/domain/entities"
-import { startOfDay, addDays } from "date-fns"
 import { formatCurrency } from "@/lib/formatters"
 
 // Gera horários de 40 em 40 minutos
@@ -56,6 +55,29 @@ export default function BookingPage() {
   const [selectedServices, setSelectedServices] = useState<Service[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showTimeSlots, setShowTimeSlots] = useState(false)
+
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date())
+
+  const timeSlotsRef = useRef<HTMLDivElement>(null)
+
+  // Sincroniza o mês do calendário
+  useEffect(() => {
+    if (selectedDate) {
+      setCalendarMonth(selectedDate)
+    }
+  }, [selectedDate])
+
+ 
+  useEffect(() => {
+    if (selectedDate && timeSlotsRef.current && showTimeSlots) {
+      setTimeout(() => {
+        timeSlotsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        })
+      }, 200)
+    }
+  }, [selectedDate, showTimeSlots])
 
   // Carrega profissionais e serviços ao montar
   useEffect(() => {
@@ -129,14 +151,36 @@ export default function BookingPage() {
     setExpandedSection(expandedSection === section ? null : section)
   }
 
-  const isSlotBooked = (time: string) => {
-    return bookedSlots.some((slot) => {
-      if (selectedBarber && selectedBarber !== "any" && slot.professional_id) {
-        return slot.appointment_time === time && slot.professional_id === selectedBarber
+  // Filtra e computa os horários válidos na tela de forma otimizada
+  const availableSlots = useMemo(() => {
+    if (!selectedDate) return []
+
+    const now = new Date()
+    const currentIsToday = isToday(selectedDate)
+
+    return allSlots.filter((time) => {
+      // 1. Validar se o horário já passou (caso seja hoje)
+      if (currentIsToday) {
+        const [hourStr, minuteStr] = time.split(":")
+        const slotDateTime = new Date(now)
+        slotDateTime.setHours(Number(hourStr), Number(minuteStr), 0, 0)
+        
+        if (isBefore(slotDateTime, now)) {
+          return false
+        }
       }
-      return slot.appointment_time === time
+
+      // 2. Validar se o horário já está agendado/ocupado no banco
+      const isBooked = bookedSlots.some((slot) => {
+        if (selectedBarber && selectedBarber !== "any" && slot.professional_id) {
+          return slot.appointment_time === time && slot.professional_id === selectedBarber
+        }
+        return slot.appointment_time === time
+      })
+
+      return !isBooked
     })
-  }
+  }, [selectedDate, bookedSlots, selectedBarber])
 
   return (
     <main className="relative min-h-screen bg-black flex flex-col">
@@ -177,7 +221,6 @@ export default function BookingPage() {
                     />
                   ))}
 
-                  {/* Opção Sem preferência */}
                   <NoPreferenceCard
                     isSelected={selectedBarber === "any"}
                     onSelect={() => {
@@ -267,19 +310,18 @@ export default function BookingPage() {
           >
             <div className="bg-neutral-800 rounded-xl p-4 space-y-4 overflow-y-auto max-h-[420px]">
               <Card className="bg-neutral-900 border border-white/10 rounded-2xl overflow-hidden">
-                <CardContent className="p-3 flex justify-center">
+                <CardContent className="p-3 flex justify-center overflow-hidden">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={(date) => {
                       setSelectedDate(date)
                       setSelectedTime(null)
-                      setExpandedSection("horario")
                     }}
-                    month={selectedDate || new Date()}
-                    onMonthChange={setSelectedDate}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
                     fixedWeeks
-                    disabled={(date) => date < startOfDay(new Date()) || date.getDay() === 0}
+                    disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
                     className="p-0"
                   />
                 </CardContent>
@@ -299,7 +341,6 @@ export default function BookingPage() {
                         const newDate = addDays(new Date(), preset.value)
                         setSelectedDate(newDate)
                         setSelectedTime(null)
-                        setExpandedSection("horario")
                       }}
                     >
                       {preset.label}
@@ -309,16 +350,18 @@ export default function BookingPage() {
               </Card>
 
               {selectedDate && (
-                <TimeSlotsSection
-                  selectedDate={selectedDate}
-                  loadingSlots={loadingSlots}
-                  availableSlots={allSlots.filter((time) => !isSlotBooked(time))}
-                  selectedTime={selectedTime}
-                  onSelectTime={(time) => {
-                    setSelectedTime(time)
-                    setExpandedSection(null)
-                  }}
-                />
+                <div ref={timeSlotsRef}>
+                  <TimeSlotsSection
+                    selectedDate={selectedDate}
+                    loadingSlots={loadingSlots}
+                    availableSlots={availableSlots}
+                    selectedTime={selectedTime}
+                    onSelectTime={(time) => {
+                      setSelectedTime(time)
+                      setExpandedSection(null)
+                    }}
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -354,8 +397,7 @@ export default function BookingPage() {
   )
 }
 
-/* --- Sub-components --- */
-
+/* --- Sub-components permanecem os mesmos --- */
 interface BarberCardProps {
   barber: Professional
   index: number
@@ -522,7 +564,7 @@ function TimeSlotsSection({ selectedDate, loadingSlots, availableSlots, selected
       )}
       {availableSlots.length === 0 && !loadingSlots && (
         <p className="text-white/40 text-xs mt-3 text-center">
-          Todos os horários desta data estão ocupados
+          Todos os horários desta data estão ocupados ou indisponíveis
         </p>
       )}
     </div>

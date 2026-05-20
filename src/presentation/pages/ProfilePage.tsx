@@ -222,7 +222,6 @@ export default function ProfilePage() {
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-white">{profile?.full_name || "Cliente"}</h1>
-            <p className="text-white/50 text-sm">Cliente desde 2024</p>
           </div>
         </div>
       </div>

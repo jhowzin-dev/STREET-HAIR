@@ -56,3 +56,13 @@ body {
 .page-transition-subtle {
   animation: pageTransitionSubtle 0.15s ease-out;
 }
+
+/* ================================================
+   OCULTAR CAPTION PADRÃO DO DAYPICKER V10
+   ================================================ */
+
+/* Esconde o texto do mês/ano padrão do DayPicker (v10) */
+.rdp-caption_label,
+.rdp-month_caption {
+  display: none !important;
+}
