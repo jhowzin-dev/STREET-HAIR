@@ -4,7 +4,7 @@ import { createClient } from "@/core/utils/supabase-server"
 import type { Appointment } from "@/domain/entities"
 
 export interface AppointmentWithClient extends Appointment {
-  client_name: string | null
+  client_name: string // <-- Alterado de string | null para string
   client_phone: string | null
 }
 
@@ -38,7 +38,8 @@ export async function getAllAppointmentsWithClients(): Promise<AppointmentWithCl
   return appointments.map((a) => ({
     ...a,
     professional: a.professional || null,
-    client_name: profileMap.get(a.user_id)?.full_name || null,
+    // Se o full_name for nulo ou não encontrar o profile, joga a string padrão para satisfazer o tipo
+    client_name: profileMap.get(a.user_id)?.full_name || "Cliente sem nome", 
     client_phone: profileMap.get(a.user_id)?.phone || null,
   }))
 }

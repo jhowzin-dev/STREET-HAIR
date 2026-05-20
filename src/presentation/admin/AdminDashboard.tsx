@@ -148,9 +148,6 @@ interface AppointmentRowProps {
 }
 
 function AppointmentRow({ appointment, isUpdating, onStatusChange }: AppointmentRowProps) {
-  // Evita o erro de tipagem no build convertendo temporariamente para any
-  const appointmentAny = appointment as any
-
   return (
     <div className="p-4 hover:bg-white/5 transition-colors">
       <div className="flex items-start justify-between mb-3">
@@ -160,7 +157,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange }: Appointment
           </div>
           <div>
             <p className="text-white font-medium text-sm">
-              {appointmentAny.client_name || "Cliente sem nome"}
+              {appointment.client_name || "Cliente sem nome"}
             </p>
             <p className="text-white/40 text-xs">{appointment.services.join(", ")}</p>
           </div>
@@ -178,7 +175,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange }: Appointment
       {appointment.status === "confirmed" && (
         <div className="flex gap-2 mt-3">
           <button
-            onClick={() => onStatusChange(appointment.id!, "completed")}
+            onClick={() => onStatusChange(appointment.id, "completed")}
             disabled={isUpdating === appointment.id}
             className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg py-2 text-xs font-medium transition-colors disabled:opacity-50"
           >
@@ -189,7 +186,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange }: Appointment
             )}
           </button>
           <button
-            onClick={() => onStatusChange(appointment.id!, "canceled")}
+            onClick={() => onStatusChange(appointment.id, "canceled")}
             disabled={isUpdating === appointment.id}
             className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg py-2 text-xs font-medium transition-colors disabled:opacity-50"
           >
@@ -207,7 +204,6 @@ interface CompactAppointmentRowProps {
 
 function CompactAppointmentRow({ appointment }: CompactAppointmentRowProps) {
   const date = new Date(appointment.appointment_date)
-  const appointmentAny = appointment as any
 
   return (
     <div className="p-4 hover:bg-white/5 transition-colors">
@@ -220,7 +216,7 @@ function CompactAppointmentRow({ appointment }: CompactAppointmentRowProps) {
           </div>
           <div>
             <p className="text-white text-sm font-medium">
-              {appointmentAny.client_name || "Cliente sem nome"}{" "}
+              {appointment.client_name || "Cliente sem nome"}{" "}
               <span className="text-white/40 text-xs font-normal ml-1">
                 • {appointment.appointment_time}
               </span>
