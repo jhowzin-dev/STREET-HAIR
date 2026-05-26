@@ -8,26 +8,26 @@ import { BottomNavigationBar } from "../widgets/BottomNavigationBar";
 
 export default function HomePage() {
   return (
-    // 1. 'h-screen overflow-y-auto' permite que a tela respire se o celular for ridiculamente pequeno.
-    // 2. Trocamos o padding inferior para um valor fixo seguro 'pb-32' que casa com a altura da sua barra.
-    <main className="h-screen w-full bg-black flex flex-col items-center justify-between overflow-y-auto scrollbar-none pt-[env(safe-area-inset-top)] pb-32 px-4 relative">
+    // min-h-screen garante que o fundo preto cubra tudo, sem cortar ou revelar fundo cinza.
+    // pb-36 dá o espaço exato pro botão de Agendar nunca bater na barra inferior flutuante.
+    <main className="min-h-screen w-full bg-black flex flex-col items-center justify-start pt-[env(safe-area-inset-top)] pb-36 px-4 relative overflow-x-hidden">
 
       <TopHeader />
 
-      {/* CONTAINER INTEGRADO (Logo + Cards + Botão) */}
-      <div className="flex-1 flex flex-col items-center justify-end w-full max-w-md mx-auto gap-y-6 py-4 min-h-0">
+      {/* CONTAINER INTEGRADO - Usando my-auto para centralizar perfeitamente na vertical se sobrar espaço */}
+      <div className="my-auto flex flex-col items-center w-full max-w-md mx-auto gap-y-8 py-6">
         
         {/* BLOCO 1: Logo Central */}
-        <div className="w-48 h-48 min-[400px]:w-56 min-[400px]:h-56 max-h-[22vh] min-h-[120px] aspect-square relative flex-shrink">
+        <div className="w-48 h-48 min-[400px]:w-56 min-[400px]:h-56 aspect-square relative">
           <Image src="/logo.jpg" alt="Street Hair" fill className="object-contain" priority />
         </div>
 
         {/* BLOCO 2: INFO CARDS - Horário & Endereço */}
-        <div className="flex gap-3 justify-center w-full flex-shrink-0">
+        <div className="flex gap-4 justify-center w-full">
           
           {/* Card Horário */}
-          <div className="bg-neutral-900 rounded-xl p-3 w-[135px] flex-shrink-0">
-            <div className="flex items-center gap-1.5 mb-1">
+          <div className="bg-neutral-900 rounded-xl p-3.5 w-[145px] flex-shrink-0 border border-neutral-800/50">
+            <div className="flex items-center gap-1.5 mb-1.5">
               <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
               <span className="text-white text-[11px] font-medium truncate">Funcionamento</span>
             </div>
@@ -37,12 +37,12 @@ export default function HomePage() {
           </div>
 
           {/* Card Endereço */}
-          <div className="bg-neutral-900 rounded-xl p-3 w-[135px] flex-shrink-0">
-            <div className="flex items-center gap-1.5 mb-1">
+          <div className="bg-neutral-900 rounded-xl p-3.5 w-[145px] flex-shrink-0 border border-neutral-800/50">
+            <div className="flex items-center gap-1.5 mb-1.5">
               <MapPin className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
               <span className="text-white text-[11px] font-medium">Endereço</span>
             </div>
-            <p className="text-[10px] text-white/80 leading-relaxed break-words">
+            <p className="text-[10px] text-white/80 leading-relaxed text-xs">
               R. P Viêira da Silva<br />
               Vila Louro, Embu-Guaçu, SP
             </p>
@@ -51,13 +51,13 @@ export default function HomePage() {
         </div>
 
         {/* Botão de Agendamento */}
-        <div className="w-full flex justify-center flex-shrink-0 z-10">
+        <div className="w-full flex justify-center z-10 px-2">
           <ActionButton label="Agendar" href="/booking" />
         </div>
         
       </div>
 
-    
+      {/* Barra de Navegação Isolada no fundo */}
       <BottomNavigationBar />
 
     </main>
