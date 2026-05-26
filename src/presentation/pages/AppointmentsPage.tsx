@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/Spinner"
 import { Alert } from "@/components/ui/Alert"
 import { getAppointments, cancelAppointment } from "@/lib/actions/appointments"
 import type { Appointment } from "@/domain/entities"
-import { formatCurrency } from "@/lib/formatters"
+import { formatCurrency, formatDate } from "@/lib/formatters"
 
 export default function AppointmentsPage() {
   const searchParams = useSearchParams()
@@ -53,6 +53,7 @@ export default function AppointmentsPage() {
   }
 
   const isPastOrCompleted = (a: Appointment) => {
+    // CORREÇÃO: Evita que o parse inverta o dia devido ao fuso UTC
     const date = parse(a.appointment_date, "yyyy-MM-dd", new Date())
     const now = new Date()
     const isCompleted = a.status === "completed"
@@ -195,7 +196,9 @@ interface AppointmentCardProps {
 }
 
 function AppointmentCard({ appointment, isHistory, onDelete, isDeleting }: AppointmentCardProps) {
-  const dateStr = new Date(appointment.appointment_date).toLocaleDateString("pt-BR")
+  // CORREÇÃO DE TIMEZONE: Convertendo a string AAAA-MM-DD diretamente sem passar pelo fuso UTC bagunçado do JS
+  const [year, month, day] = appointment.appointment_date.split("-")
+  const dateStr = `${day}/${month}/${year}`
 
   if (isHistory) {
     return (
