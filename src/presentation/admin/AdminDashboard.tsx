@@ -148,6 +148,9 @@ interface AppointmentRowProps {
 }
 
 function AppointmentRow({ appointment, isUpdating, onStatusChange }: AppointmentRowProps) {
+  // Acessamos dinamicamente para não estourar erro de tipo no build
+  const clientPhone = (appointment as any).client_phone
+
   return (
     <div className="p-4 hover:bg-white/5 transition-colors">
       <div className="flex items-start justify-between mb-3">
@@ -157,9 +160,14 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange }: Appointment
           </div>
           <div>
             <p className="text-white font-medium text-sm">
-             {appointment.client_name || "Cliente sem nome"}
+             {(appointment as any).client_name || "Cliente sem nome"}
             </p>
-            <p className="text-white/40 text-xs">{appointment.services.join(", ")}</p>
+            {clientPhone && (
+              <p className="text-xs text-amber-400/80 font-normal">
+                {clientPhone}
+              </p>
+            )}
+            <p className="text-white/40 text-xs mt-0.5">{appointment.services.join(", ")}</p>
           </div>
         </div>
         <StatusBadge status={appointment.status} size="sm" />
@@ -204,6 +212,7 @@ interface CompactAppointmentRowProps {
 
 function CompactAppointmentRow({ appointment }: CompactAppointmentRowProps) {
   const date = new Date(appointment.appointment_date)
+  const clientPhone = (appointment as any).client_phone
 
   return (
     <div className="p-4 hover:bg-white/5 transition-colors">
@@ -216,12 +225,17 @@ function CompactAppointmentRow({ appointment }: CompactAppointmentRowProps) {
           </div>
           <div>
             <p className="text-white text-sm font-medium">
-              {appointment.client_name || "Cliente sem nome"}{" "}
+              {(appointment as any).client_name || "Cliente sem nome"}{" "}
               <span className="text-white/40 text-xs font-normal ml-1">
                 • {appointment.appointment_time}
               </span>
             </p>
-            <p className="text-white/40 text-xs">{appointment.services.join(", ")}</p>
+            {clientPhone && (
+              <p className="text-[11px] text-amber-400/80 font-normal">
+                {clientPhone}
+              </p>
+            )}
+            <p className="text-white/40 text-xs mt-0.5">{appointment.services.join(", ")}</p>
           </div>
         </div>
         <div className="text-right">

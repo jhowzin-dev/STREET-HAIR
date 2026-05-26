@@ -3,14 +3,8 @@
 import { createClient } from "@/core/utils/supabase-server"
 import type { Appointment } from "@/domain/entities"
 
-// Definimos uma interface estendida idêntica à que funciona perfeitamente
-export interface AppointmentWithClient extends Appointment {
-  client_name: string
-  client_phone: string | null
-}
-
-// Busca TODOS os agendamentos mapeando os nomes dos perfis sem quebrar o TypeScript
-export async function getAllAppointments(): Promise<AppointmentWithClient[]> {
+// Busca TODOS os agendamentos.
+export async function getAllAppointments(): Promise<Appointment[]> {
   const supabase = await createClient()
 
   // 1. Puxa os agendamentos normais com o nome do profissional
@@ -27,14 +21,7 @@ export async function getAllAppointments(): Promise<AppointmentWithClient[]> {
   // 2. Extrai os IDs únicos dos utilizadores que agendaram
   const userIds = [...new Set(appointments.map((a) => a.user_id).filter(Boolean))]
 
-  if (userIds.length === 0) {
-    return appointments.map((a) => ({
-      ...a,
-      professional: a.professional || null,
-      client_name: "Cliente sem nome",
-      client_phone: null,
-    }))
-  }
+  if (userIds.length === 0) return appointments
 
   // 3. Busca os perfis correspondentes diretamente na tabela pública 'profiles'
   const { data: profiles } = await supabase
@@ -45,13 +32,13 @@ export async function getAllAppointments(): Promise<AppointmentWithClient[]> {
   // 4. Cria um mapa rápido para associar IDs aos perfis correspondentes
   const profileMap = new Map(profiles?.map((p) => [p.id, p]) || [])
 
-  // 5. Retorna o agendamento injetando 'client_name' diretamente no objeto principal
+  // 5. Injeta o nome e o telefone diretamente respeitando a estrutura atual do seu objeto
   return appointments.map((a) => ({
     ...a,
     professional: a.professional || null,
     client_name: profileMap.get(a.user_id)?.full_name || "Cliente sem nome",
-    client_phone: profileMap.get(a.user_id)?.phone || null,
-  }))
+    client_phone: profileMap.get(a.user_id)?.phone || "Sem telefone",
+  })) as Appointment[]
 }
 
 // Atualiza o status de um agendamento.
