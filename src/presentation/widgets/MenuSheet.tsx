@@ -104,14 +104,14 @@ export function MenuSheet() {
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 animate-fadeIn"
+          className="fixed inset-0 bg-black/60 z-[59] animate-fadeIn"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sheet */}
       <div
-        className={`fixed top-0 left-0 h-full w-[85%] max-w-[320px] bg-neutral-900 z-50 transform transition-transform duration-300 ease-out ${
+        className={`fixed top-0 left-0 h-full w-[85%] max-w-[320px] bg-neutral-900 z-[60] transform transition-transform duration-300 ease-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

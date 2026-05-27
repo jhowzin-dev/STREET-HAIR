@@ -211,7 +211,8 @@ interface CompactAppointmentRowProps {
 }
 
 function CompactAppointmentRow({ appointment }: CompactAppointmentRowProps) {
-  const date = new Date(appointment.appointment_date)
+  // CORREÇÃO: Evita que JS parse a data como UTC e perca um dia
+  const date = new Date(appointment.appointment_date + "T00:00:00")
   const clientPhone = (appointment as any).client_phone
 
   return (
