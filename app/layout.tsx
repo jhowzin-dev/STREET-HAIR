@@ -15,6 +15,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Street Hair - Barbearia",
   description: "Agendamento de horários para barbearia",
+  openGraph: {
+    title: "Street Hair - Barbearia",
+    description: "Agendamento de horários para barbearia",
+    url: "https://street-hair.vercel.app",
+    siteName: "Street Hair",
+    images: [
+      {
+        url: "/logo.jpg", // Puxa direto da sua pasta public
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "pt_BR",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -24,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
