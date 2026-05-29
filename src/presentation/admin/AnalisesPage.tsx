@@ -11,9 +11,9 @@ import {
   Clock,
   User,
   Phone,
-  CircleDollarSign,
-  CheckCheck,
-} from "lucide-react"
+  CircleDollarSign, 
+  CheckCheck, 
+} from "lucide-react" 
 import { markAppointmentAsCompleted } from "@/lib/actions/analises"
 import { Spinner } from "@/components/ui/Spinner"
 import { StatusBadge } from "@/presentation/widgets/StatusBadge"

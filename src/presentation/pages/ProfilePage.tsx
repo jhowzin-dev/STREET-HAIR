@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, memo } from "react"
 import { User, Calendar, Scissors, Bell, ChevronRight, FileText, Shield, Camera, X, Check, LogOut } from "lucide-react"
 import { TopHeader } from "../widgets/TopHeader"
 import { BottomNavigationBar } from "../widgets/BottomNavigationBar"
@@ -8,7 +8,177 @@ import { getProfile, updateProfile } from "@/lib/actions/profile"
 import { getAppointments } from "@/lib/actions/appointments"
 import { signOut, getCurrentUser } from "@/lib/actions/auth"
 import type { UserProfile, Appointment } from "@/domain/entities"
+import { PhoneInput } from "@/components/ui/PhoneInput"
 
+// ── Input de nome isolado para evitar re-render do modal inteiro ──
+const NameInput = memo(function NameInput({
+  initialValue,
+  onChange,
+  disabled,
+}: {
+  initialValue: string
+  onChange: (value: string) => void
+  disabled: boolean
+}) {
+  const [value, setValue] = useState(initialValue)
+
+  // Sincroniza com valor externo apenas na montagem
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setValue(e.target.value)
+      onChange(e.target.value)
+    },
+    [onChange]
+  )
+
+  return (
+    <input
+      type="text"
+      autoComplete="name"
+      autoCorrect="off"
+      autoCapitalize="words"
+      spellCheck={false}
+      value={value}
+      onChange={handleChange}
+      placeholder="Digite aqui..."
+      disabled={disabled}
+      className="w-full bg-neutral-800 text-white p-4 rounded-xl border border-white/10 focus:border-amber-500 outline-none mb-4"
+    />
+  )
+})
+
+// ── Componente de Modal com state interno isolado ──
+interface EditModalProps {
+  editModal: "name" | "phone" | "photo" | null
+  editValue: string
+  profile: UserProfile | null
+  isSaving: boolean
+  onClose: () => void
+  onSave: (field: "name" | "phone" | "avatar_url", value: string) => void
+  onChangeValue: (value: string) => void
+  onPhotoUpload: () => void
+}
+
+const EditModal = memo(function EditModal({
+  editModal,
+  editValue: externalEditValue,
+  profile,
+  isSaving,
+  onClose,
+  onSave,
+  onChangeValue,
+  onPhotoUpload,
+}: EditModalProps) {
+  // State local isolado para nao re-renderizar a pagina inteira no onChange
+  const [localValue, setLocalValue] = useState(externalEditValue)
+
+  // Sincroniza valor externo apenas quando o modal abre/fecha
+  useEffect(() => {
+    setLocalValue(externalEditValue)
+  }, [externalEditValue, editModal])
+
+  const titles: Record<string, string> = {
+    name: "Nome completo",
+    phone: "Telefone",
+    photo: "Foto de perfil",
+  }
+
+  const isPhone = editModal === "phone"
+  const isName = editModal === "name"
+
+  const handleChange = useCallback(
+    (value: string) => {
+      setLocalValue(value)
+      onChangeValue(value)
+    },
+    [onChangeValue]
+  )
+
+  const handleSaveClick = useCallback(() => {
+    if ((isName || isPhone) && editModal) {
+      onSave(editModal, localValue)
+    }
+  }, [isName, isPhone, editModal, localValue, onSave])
+
+  if (!editModal) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-end justify-center z-50">
+      <div className="bg-neutral-900 w-full max-w-md rounded-t-3xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-white text-lg font-medium">{titles[editModal]}</h3>
+          <button onClick={onClose} className="p-2">
+            <X className="w-5 h-5 text-white/60" />
+          </button>
+        </div>
+
+        {editModal === "photo" ? (
+          <div className="space-y-4">
+            <div className="w-32 h-32 mx-auto bg-neutral-800 rounded-2xl flex items-center justify-center overflow-hidden">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url!} alt="Foto" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-16 h-16 text-white/40" />
+              )}
+            </div>
+            <button
+              onClick={onPhotoUpload}
+              className="w-full bg-amber-500 text-black font-medium py-4 rounded-xl flex items-center justify-center gap-2"
+            >
+              <Camera className="w-5 h-5" />
+              Escolher nova foto
+            </button>
+            {profile?.avatar_url && (
+              <button
+                onClick={() => onSave("avatar_url", "")}
+                className="w-full bg-neutral-800 text-red-400 font-medium py-4 rounded-xl"
+              >
+                Remover foto
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {isPhone ? (
+              <PhoneInput
+                value={localValue}
+                onChange={handleChange}
+                autoFocus
+                className="w-full bg-neutral-800 text-white p-4 rounded-xl border border-white/10 focus:border-amber-500 outline-none mb-4"
+              />
+            ) : (
+              <NameInput
+                initialValue={localValue}
+                onChange={handleChange}
+                disabled={isSaving}
+              />
+            )}
+            <button
+              onClick={handleSaveClick}
+              disabled={isSaving}
+              className="w-full bg-white text-black font-medium py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isSaving ? (
+                <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Check className="w-5 h-5" />
+                  Salvar
+                </>
+              )}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+})
+
+// ── Componente principal de perfil ──
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -29,10 +199,7 @@ export default function ProfilePage() {
         // Middleware já garante que usuário está logado, mas mantém check básico
         if (!user) return
 
-        const [profileData, appointmentsData] = await Promise.all([
-          getProfile(),
-          getAppointments(),
-        ])
+        const [profileData, appointmentsData] = await Promise.all([getProfile(), getAppointments()])
 
         if (profileData) {
           setProfile(profileData)
@@ -53,7 +220,7 @@ export default function ProfilePage() {
     loadProfileData()
   }, [])
 
-  const handlePhotoUpload = () => {
+  const handlePhotoUpload = useCallback(() => {
     const photos = [
       "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
       "https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka",
@@ -62,115 +229,53 @@ export default function ProfilePage() {
     ]
     const randomPhoto = photos[Math.floor(Math.random() * photos.length)]
     handleSaveField("avatar_url", randomPhoto)
-  }
+  }, [])
 
-  const handleSaveField = async (field: "name" | "phone" | "avatar_url", value: string) => {
-    setIsSaving(true)
-    try {
-      const updates: Partial<Pick<UserProfile, "full_name" | "phone" | "avatar_url">> = {}
-      if (field === "name") updates.full_name = value
-      if (field === "avatar_url") {
-        if (value) updates.avatar_url = value
-      } else {
-        updates.phone = value
+  const handleSaveField = useCallback(
+    async (field: "name" | "phone" | "avatar_url", value: string) => {
+      setIsSaving(true)
+      try {
+        const updates: Partial<Pick<UserProfile, "full_name" | "phone" | "avatar_url">> = {}
+        if (field === "name") updates.full_name = value
+        if (field === "avatar_url") {
+          if (value) updates.avatar_url = value
+        } else {
+          updates.phone = value
+        }
+
+        await updateProfile(updates)
+        setProfile((prev) => (prev ? { ...prev, ...updates } : null))
+      } catch (err) {
+        console.error("Erro ao salvar:", err)
+      } finally {
+        setIsSaving(false)
+        setEditModal(null)
+        setEditValue("")
       }
+    },
+    [])
 
-      await updateProfile(updates)
-      setProfile((prev) => (prev ? { ...prev, ...updates } : null))
-    } catch (err) {
-      console.error("Erro ao salvar:", err)
-    } finally {
-      setIsSaving(false)
-      setEditModal(null)
-      setEditValue("")
-    }
-  }
+  const openEdit = useCallback(
+    (field: "name" | "phone") => {
+      setEditValue((profile?.full_name || "") as string)
+      if (field === "phone") {
+        setEditValue((profile?.phone || "") as string)
+      }
+      setEditModal(field)
+    },
+    [profile]
+  )
 
-  const openEdit = (field: "name" | "phone") => {
-    setEditValue((profile?.full_name || "") as string)
-    if (field === "phone") {
-      setEditValue((profile?.phone || "") as string)
-    }
-    setEditModal(field)
-  }
+  const handleCloseModal = useCallback(() => {
+    setEditModal(null)
+  }, [])
+
+  const handleChangeValue = useCallback((value: string) => {
+    setEditValue(value)
+  }, [])
 
   const totalCuts = appointments.length
   const lastCut = appointments[appointments.length - 1]
-
-  const EditModal = () => {
-    if (!editModal) return null
-
-    const titles: Record<string, string> = {
-      name: "Nome completo",
-      phone: "Telefone",
-      photo: "Foto de perfil",
-    }
-
-    return (
-      <div className="fixed inset-0 bg-black/80 flex items-end justify-center z-50">
-        <div className="bg-neutral-900 w-full max-w-md rounded-t-3xl p-6 animate-slideUp">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-white text-lg font-medium">{titles[editModal]}</h3>
-            <button onClick={() => setEditModal(null)} className="p-2">
-              <X className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-
-          {editModal === "photo" ? (
-            <div className="space-y-4">
-              <div className="w-32 h-32 mx-auto bg-neutral-800 rounded-2xl flex items-center justify-center overflow-hidden">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url!} alt="Foto" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-16 h-16 text-white/40" />
-                )}
-              </div>
-              <button
-                onClick={handlePhotoUpload}
-                className="w-full bg-amber-500 text-black font-medium py-4 rounded-xl flex items-center justify-center gap-2"
-              >
-                <Camera className="w-5 h-5" />
-                Escolher nova foto
-              </button>
-              {profile?.avatar_url && (
-                <button
-                  onClick={() => handleSaveField("avatar_url", "")}
-                  className="w-full bg-neutral-800 text-red-400 font-medium py-4 rounded-xl"
-                >
-                  Remover foto
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <input
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                placeholder={editModal === "phone" ? "(11) 99999-9999" : "Digite aqui..."}
-                className="w-full bg-neutral-800 text-white p-4 rounded-xl border border-white/10 focus:border-amber-500 outline-none mb-4"
-                autoFocus
-              />
-              <button
-                onClick={() => handleSaveField(editModal, editValue)}
-                disabled={isSaving}
-                className="w-full bg-white text-black font-medium py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isSaving ? (
-                  <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" />
-                    Salvar
-                  </>
-                )}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    )
-  }
 
   const MenuItem = ({ icon, title, subtitle, onClick, danger }: any) => (
     <button
@@ -377,7 +482,16 @@ export default function ProfilePage() {
 
       <BottomNavigationBar />
 
-      <EditModal />
+      <EditModal
+        editModal={editModal}
+        editValue={editValue}
+        profile={profile}
+        isSaving={isSaving}
+        onClose={handleCloseModal}
+        onSave={handleSaveField}
+        onChangeValue={handleChangeValue}
+        onPhotoUpload={handlePhotoUpload}
+      />
     </main>
   )
 }
