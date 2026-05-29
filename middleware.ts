@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
 const AUTH_PATHS = ["/auth", "/auth/callback"]
-const ASSET_PATTERNS = ["/_next/", "/favicon.ico", "/logo.jpg", "/api/"]
+const ASSET_PATTERNS = ["/_next/", "/favicon.ico", "/logo.jpg", "/api/", "/assets/"]
 
 function isAsset(path: string): boolean {
   return ASSET_PATTERNS.some((pattern) => path.startsWith(pattern))
 }
 
-// O Next.js só exige que aqui se chame 'middleware' para ativar o gancho automático
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: { headers: request.headers },
@@ -47,6 +46,7 @@ export async function middleware(request: NextRequest) {
   const isAuthPath =
     pathname === "/auth" || AUTH_PATHS.some((p) => pathname.startsWith(p))
 
+  // 1. Redirecionamento básico de sessão ativa/inativa
   if (user && isAuthPath) {
     return NextResponse.redirect(new URL("/", request.url))
   }
@@ -55,6 +55,42 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth", request.url))
   }
 
+  // 2. Trava de segurança para obrigar o preenchimento do WhatsApp (Utilizadores novos e antigos)
+  if (user && pathname !== "/onboarding") {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("phone")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      // Se o telefone não existir ou for uma string vazia, barra e manda para o onboarding
+      if (!profile?.phone || profile.phone.trim() === "") {
+        return NextResponse.redirect(new URL("/onboarding", request.url))
+      }
+    } catch (err) {
+      console.error("[Middleware] Erro ao verificar telefone:", err)
+    }
+  }
+
+  // 3. Se o utilizador já tiver o telefone salvo e tentar aceder a /onboarding manualmente, volta para a Home
+  if (user && pathname === "/onboarding") {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("phone")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      if (profile?.phone && profile.phone.trim() !== "") {
+        return NextResponse.redirect(new URL("/", request.url))
+      }
+    } catch (err) {
+      console.error("[Middleware] Erro ao validar rota de onboarding:", err)
+    }
+  }
+
+  // 4. Proteção de rotas administrativas
   if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") {
       return response
@@ -93,17 +129,8 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
+// ALTERADO: O matcher agora interceta de forma inteligente todas as páginas internas da aplicação,
+// garantindo que o onboarding e qualquer nova página criada fiquem protegidos automaticamente.
 export const config = {
-  matcher: [
-    "/",
-    "/about",
-    "/auth/:path*",
-    "/booking",
-    "/booking/:path*",
-    "/appointments",
-    "/appointments/:path*",
-    "/profile",
-    "/profile/:path*",
-    "/admin/:path*",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api|auth|assets).*)"],
 }

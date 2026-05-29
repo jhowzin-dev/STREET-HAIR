@@ -237,10 +237,9 @@ export default function ProfilePage() {
       try {
         const updates: Partial<Pick<UserProfile, "full_name" | "phone" | "avatar_url">> = {}
         if (field === "name") updates.full_name = value
+        if (field === "phone") updates.phone = value // 🛠️ CORREÇÃO: Mudado de 'else' para 'if' explícito para não misturar os campos
         if (field === "avatar_url") {
           if (value) updates.avatar_url = value
-        } else {
-          updates.phone = value
         }
 
         await updateProfile(updates)

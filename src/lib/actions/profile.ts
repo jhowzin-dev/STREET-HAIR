@@ -50,7 +50,6 @@ export async function getProfile() {
     }
   }
 
-  // Retorna dados do perfil criado
   return {
     id: user.id,
     full_name: fullName,

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/core/utils/supabase"
-
 import { Spinner } from "@/components/ui/Spinner"
 
 export default function AuthCallbackPage() {
@@ -13,23 +12,41 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const supabase = createClient()
 
-    // Verifica se há uma sessão ativa após o callback do OAuth
+    async function checkAndRedirect(session: any) {
+      try {
+        // Busca o perfil do usuario para verificar se tem telefone
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("id", session.user.id)
+          .maybeSingle()
+
+        // Se nao tiver telefone, redireciona para onboarding
+        if (!profile?.phone) {
+          router.push("/onboarding")
+          router.refresh()
+        } else {
+          router.push("/")
+          router.refresh()
+        }
+      } catch {
+        setError("Erro ao verificar perfil. Tente novamente.")
+      }
+    }
+
+    // Verifica se ha uma sessao ativa apos o callback do OAuth
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        router.push("/")
-        router.refresh()
+        checkAndRedirect(session)
       } else {
-       
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
           if (event === "SIGNED_IN" && currentSession) {
-            router.push("/")
-            router.refresh()
+            checkAndRedirect(currentSession)
           }
         })
 
-        
         const timeout = setTimeout(() => {
-          setError("Não foi possível completar o login. Tente novamente.")
+          setError("Nao foi possivel completar o login. Tente novamente.")
         }, 10000)
 
         return () => {
