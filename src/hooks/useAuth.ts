@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { signIn, signUp, signInWithGoogle, signOut } from "@/lib/actions/auth"
+import { verifyEmailOtp, resendEmailOtp } from "@/lib/actions/email-verification"
 import { getCurrentUserRole } from "@/lib/actions/admin"
 
 interface UseAuthReturn {
@@ -18,6 +19,8 @@ interface UseAuthReturn {
   }) => Promise<boolean>
   handleGoogleSignIn: () => Promise<void>
   handleLogout: () => Promise<void>
+  handleVerifyOtp: (otpCode: string, email: string) => Promise<boolean>
+  handleResendOtp: (email: string) => Promise<boolean>
   checkAdminRole: () => Promise<boolean>
 }
 
@@ -33,6 +36,10 @@ export function useAuth(): UseAuthReturn {
     try {
       const result = await signIn({ email, password })
       if (result.success) {
+        if (!result.emailVerified) {
+          window.location.href = `/confirm?email=${encodeURIComponent(email)}`
+          return true
+        }
         router.push("/")
         router.refresh()
         return true
@@ -64,11 +71,8 @@ export function useAuth(): UseAuthReturn {
         phone: cleanPhone || undefined,
       })
       if (result.success) {
-        setSuccess("Conta criada com sucesso! Redirecionando...")
-        setTimeout(() => {
-          router.push("/")
-          router.refresh()
-        }, 1500)
+        setSuccess("Conta criada! Digite o código de verificação enviado para seu e-mail.")
+        window.location.href = `/confirm?email=${encodeURIComponent(data.email)}`
         return true
       }
       return false
@@ -78,15 +82,46 @@ export function useAuth(): UseAuthReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [router])
+  }, [])
+
+  const handleVerifyOtp = useCallback(async (otpCode: string, email: string): Promise<boolean> => {
+    setIsLoading(true)
+    setError("")
+    setSuccess("")
+    try {
+      await verifyEmailOtp({ email, token: otpCode })
+      setSuccess("E-mail confirmado com sucesso!")
+      return true
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Código inválido ou expirado")
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const handleResendOtp = useCallback(async (email: string): Promise<boolean> => {
+    setIsLoading(true)
+    setError("")
+    try {
+      await resendEmailOtp(email)
+      setSuccess("Novo código de verificação enviado!")
+      return true
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao reenviar código")
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   const handleGoogleSignIn = useCallback(async () => {
     setIsLoading(true)
     setError("")
     try {
-      const data = await signInWithGoogle()
-      if (data.url) {
-        window.location.href = data.url
+      const result = await signInWithGoogle()
+      if (result.url) {
+        window.location.href = result.url
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao entrar com Google")
@@ -118,6 +153,8 @@ export function useAuth(): UseAuthReturn {
     handleRegister,
     handleGoogleSignIn,
     handleLogout,
+    handleVerifyOtp,
+    handleResendOtp,
     checkAdminRole,
   }
 }

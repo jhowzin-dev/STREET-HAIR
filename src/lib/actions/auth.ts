@@ -16,10 +16,25 @@ export async function signIn({ email, password }: { email: string; password: str
   if (error) throw new Error(error.message)
   if (!data.user) throw new Error("Login falhou")
 
-  return { success: true, user: { id: data.user.id, email: data.user.email } }
+  // Checa se e-mail está confirmado na tabela profiles
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email_verified, email_verified_at")
+    .eq("id", data.user.id)
+    .maybeSingle()
+
+  const isVerified =
+    !!data.user.email_confirmed_at ||
+    !!profile?.email_verified
+
+  return {
+    success: true,
+    user: { id: data.user.id, email: data.user.email },
+    emailVerified: isVerified,
+  }
 }
 
-// SIGN UP
+//  SIGN UP 
 export async function signUp({
   email,
   password,
@@ -33,7 +48,7 @@ export async function signUp({
 }) {
   const supabase = await createClient()
 
-  // Cria o usuário no Auth com metadata
+  // Cria o usuário NO AUTH
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -42,26 +57,51 @@ export async function signUp({
     },
   })
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    // Se o erro for porque usuario ja existe, avisamos
+    if (error.message.includes("already been registered")) {
+      throw new Error("Este e-mail já está cadastrado. Tente fazer login.")
+    }
+    throw new Error(error.message)
+  }
+
   if (!data.user) throw new Error("Registro falhou")
 
-  // Upsert do perfil
+  // Cria o perfil com email_verified = false
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: data.user.id,
     full_name: fullName,
     phone: phone || null,
     avatar_url: null,
     role: "user",
+    email_verified: false,
+    email_verified_at: null,
   }, { onConflict: "id" })
 
   if (profileError) {
     console.error("Erro ao criar perfil na tabela profiles:", profileError)
   }
 
+  // Faz logout para impedir acesso sem verificação
+  await supabase.auth.signOut()
+
+  // Envia OTP para confirmar e-mail
+  const { error: otpError } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false, // Nao criar novo usuario, apenas enviar OTP
+    },
+  })
+
+  if (otpError) {
+    console.error("Erro ao enviar OTP:", otpError)
+    throw new Error("Erro ao enviar código de verificação. Tente novamente.")
+  }
+
   return { success: true, user: { id: data.user.id, email: data.user.email } }
 }
 
-// SIGN IN WITH GOOGLE
+// ── SIGN IN WITH GOOGLE ────────────────────────
 export async function signInWithGoogle() {
   const redirectTo =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
@@ -85,7 +125,7 @@ export async function signInWithGoogle() {
   return { url: data.url }
 }
 
-// SIGN OUT
+// ── SIGN OUT ───────────────────────────────────
 export async function signOut() {
   const supabase = await createClient()
 
@@ -97,7 +137,7 @@ export async function signOut() {
   redirect("/auth")
 }
 
-// GET CURRENT USER
+// ── GET CURRENT USER ───────────────────────────
 export async function getCurrentUser() {
   const supabase = await createClient()
 
@@ -108,8 +148,17 @@ export async function getCurrentUser() {
 
   if (error || !user) return null
 
+  // Busca verificação de e-mail na tabela
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email_verified, email_verified_at, phone")
+    .eq("id", user.id)
+    .maybeSingle()
+
   return {
     id: user.id,
     email: user.email,
+    emailVerified: !!user.email_confirmed_at || !!profile?.email_verified,
+    phone: profile?.phone || null,
   }
 }

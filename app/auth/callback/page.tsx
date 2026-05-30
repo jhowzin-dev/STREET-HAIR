@@ -14,14 +14,25 @@ export default function AuthCallbackPage() {
 
     async function checkAndRedirect(session: any) {
       try {
-        // Busca o perfil do usuario para verificar se tem telefone
+        // Marca e-mail como verificado para usuários do Google (email já é verificado pelo provedor)
         const { data: profile } = await supabase
           .from("profiles")
-          .select("phone")
+          .select("phone, email_verified")
           .eq("id", session.user.id)
           .maybeSingle()
 
-        // Se nao tiver telefone, redireciona para onboarding
+        // Se o e-mail ainda não está verificado (caso seja novo cadastro via OAuth)
+        if (!profile?.email_verified) {
+          await supabase
+            .from("profiles")
+            .update({
+              email_verified: true,
+              email_verified_at: new Date().toISOString(),
+            })
+            .eq("id", session.user.id)
+        }
+
+        // Verifica onboarding (telefone)
         if (!profile?.phone) {
           router.push("/onboarding")
           router.refresh()

@@ -46,17 +46,63 @@ export async function middleware(request: NextRequest) {
   const isAuthPath =
     pathname === "/auth" || AUTH_PATHS.some((p) => pathname.startsWith(p))
 
+  const isConfirmPath = pathname === "/confirm"
+  const PUBLIC_PATHS = ["/auth", "/auth/callback", "/confirm"]
+
   // 1. Redirecionamento básico de sessão ativa/inativa
+  //    Permite que /confirm seja acessada SEM sessão (usuário digita o código)
   if (user && isAuthPath) {
     return NextResponse.redirect(new URL("/", request.url))
   }
 
-  if (!user && !isAuthPath) {
+  if (!user && !isAuthPath && !isConfirmPath) {
     return NextResponse.redirect(new URL("/auth", request.url))
   }
 
-  // 2. Trava de segurança para obrigar o preenchimento do WhatsApp (Utilizadores novos e antigos)
-  if (user && pathname !== "/onboarding") {
+  // ── 2. VERIFICAÇÃO DE E-MAIL OBRIGATÓRIA ────────────────────────────
+  // Se usuário estiver logado mas não confirmou o e-mail, MANDA para /confirm
+  if (user && !isAuthPath && !isConfirmPath) {
+    try {
+      // Checa se o e-mail foi confirmado no Auth OU na tabela profiles
+      const isVerified =
+        !!user.email_confirmed_at || // Supabase Auth nativo
+        (await supabase
+          .from("profiles")
+          .select("email_verified")
+          .eq("id", user.id)
+          .maybeSingle()
+          .then(({ data }) => data?.email_verified))
+
+      if (!isVerified) {
+        return NextResponse.redirect(new URL("/confirm", request.url))
+      }
+    } catch (err) {
+      console.error("[Middleware] Erro ao verificar e-mail:", err)
+    }
+  }
+
+  // Se está na tela de confirmação e e-mail já está verificado, redireciona para home
+  if (user && isConfirmPath) {
+    try {
+      const isVerified =
+        !!user.email_confirmed_at ||
+        (await supabase
+          .from("profiles")
+          .select("email_verified")
+          .eq("id", user.id)
+          .maybeSingle()
+          .then(({ data }) => data?.email_verified))
+
+      if (isVerified) {
+        return NextResponse.redirect(new URL("/", request.url))
+      }
+    } catch (err) {
+      console.error("[Middleware] Erro ao verificar e-mail na tela de confirmação:", err)
+    }
+  }
+
+  // 3. Trava de segurança para obrigar o preenchimento do WhatsApp
+  if (user && pathname !== "/onboarding" && !isConfirmPath) {
     try {
       const { data: profile } = await supabase
         .from("profiles")
@@ -64,7 +110,6 @@ export async function middleware(request: NextRequest) {
         .eq("id", user.id)
         .maybeSingle()
 
-      // Se o telefone não existir ou for uma string vazia, barra e manda para o onboarding
       if (!profile?.phone || profile.phone.trim() === "") {
         return NextResponse.redirect(new URL("/onboarding", request.url))
       }
@@ -73,7 +118,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 3. Se o utilizador já tiver o telefone salvo e tentar aceder a /onboarding manualmente, volta para a Home
+  // 4. Se o usuário já tiver o telefone salvo e tentar acessar onboarding
   if (user && pathname === "/onboarding") {
     try {
       const { data: profile } = await supabase
@@ -90,7 +135,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 4. Proteção de rotas administrativas
+  // 5. Proteção de rotas administrativas
   if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") {
       return response
@@ -130,7 +175,7 @@ export async function middleware(request: NextRequest) {
 }
 
 // ALTERADO: O matcher agora interceta de forma inteligente todas as páginas internas da aplicação,
-// garantindo que o onboarding e qualquer nova página criada fiquem protegidos automaticamente.
+// garantindo que a verificação de e-mail, o onboarding e qualquer nova página criada fiquem protegidos automaticamente.
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|api|auth|assets).*)"],
 }

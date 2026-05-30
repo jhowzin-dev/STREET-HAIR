@@ -74,6 +74,8 @@ export interface UserProfile {
   phone: string | null
   avatar_url: string | null
   role: UserRole
+  email_verified?: boolean | null
+  email_verified_at?: string | null
   notification_preferences: NotificationPreferences
   created_at?: string
   updated_at?: string | null
