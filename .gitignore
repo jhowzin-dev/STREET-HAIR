@@ -1,8 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# DEPENDÊNCIAS (Node e Pacotes)
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,50 +8,45 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# BUILDS E PRODUÇÃO 
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
 
-# next.js
-/.next/
-/out/
+# VARIÁVEIS DE AMBIENTE 
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
 
-# production
-/build
-
-# misc
+# SISTEMA OPERATIVO E DEBUG
 .DS_Store
-*.pem
 Thumbs.db
-
-# debug
+*.pem
 npm-debug.log*
 yarn-debug.log*
 .pnpm-debug.log*
 yarn-error.log*
 
-# env files 
-.env
-.env.local
-.env.*.local
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-
-
-# lock files
+# LOCK FILES
 yarn.lock
+pnpm-lock.yaml
 
-.obsidian
-.vscode
-ANALISES
-progressos
-node_modules
-.next
-.env.local
+# FERRAMENTAS LOCAIS, IDEs E ANOTAÇÕES DE IA
+.vscode/
+.obsidian/
+.vercel/
+supabase/
+ANALISES/
+progressos/
 AGENTS.md
 CLAUDE.md
 SUPABASE_SETUP.md
-supabase/
+
+
+# TESTES
+coverage/
