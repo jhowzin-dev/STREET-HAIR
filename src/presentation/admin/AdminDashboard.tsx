@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
-import { Calendar, Scissors, ArrowLeft, User, Trash2 } from "lucide-react"
+import { Calendar, Scissors, ArrowLeft, User, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { updateAppointmentStatus } from "@/lib/actions/admin"
 import type { Appointment } from "@/domain/entities"
@@ -28,8 +28,8 @@ export default function AdminDashboard({ appointments, stats }: Props) {
   const today = new Date().toISOString().split("T")[0]
 
   // Estados dos filtros da parte de cima
-  const [selectedBarber, setSelectedBarber] = useState<string>("todos")
-  const [activeTab, setActiveTab] = useState<"hoje" | "concluidos" | "cancelados" | "todos">("hoje")
+   const [selectedBarber, setSelectedBarber] = useState<string>("all")
+  const [activeTab, setActiveTab] = useState<"hoje" | "concluidos" | "cancelados">("hoje")
 
   // Coleta dinamicamente os nomes dos barbeiros
   const availableBarbers = useMemo(() => {
@@ -42,16 +42,16 @@ export default function AdminDashboard({ appointments, stats }: Props) {
   // --- CONTADORES DINÂMICOS PARA AS ABAS (Respeitam o barbeiro selecionado) ---
   const tabCounts = useMemo(() => {
     const barberFiltered = appointments.filter((appointment) => {
-      if (selectedBarber === "todos") return true
+       if (selectedBarber === "all") return true
       return (appointment.professional?.name || "") === selectedBarber
     })
 
-    return {
-      hoje: barberFiltered.filter(a => a.appointment_date === today && a.status === "confirmed").length,
-      concluidos: barberFiltered.filter(a => a.status === "completed").length,
-      cancelados: barberFiltered.filter(a => a.appointment_date === today && a.status === "canceled").length,
-      todos: barberFiltered.length
-    }
+     return {
+       hoje: barberFiltered.filter(a => a.appointment_date === today && a.status === "confirmed").length,
+        // Only completed appointments from today
+        concluidos: barberFiltered.filter(a => a.appointment_date === today && a.status === "completed").length,
+       cancelados: barberFiltered.filter(a => a.appointment_date === today && a.status === "canceled").length
+     }
   }, [appointments, selectedBarber, today])
 
   // Lógica de filtragem na listagem principal baseado na aba ativa
@@ -62,15 +62,16 @@ export default function AdminDashboard({ appointments, stats }: Props) {
       let matchesStatus = true
       if (activeTab === "hoje") {
         matchesStatus = isToday && appointment.status === "confirmed"
-      } else if (activeTab === "concluidos") {
-        matchesStatus = appointment.status === "completed"
-      } else if (activeTab === "cancelados") {
+        } else if (activeTab === "concluidos") {
+          // Completed appointments only from today
+          matchesStatus = isToday && appointment.status === "completed"
+        } else if (activeTab === "cancelados") {
         matchesStatus = isToday && appointment.status === "canceled"
       }
 
       const barberName = appointment.professional?.name || ""
       let matchesBarber = true
-      if (selectedBarber !== "todos") {
+       if (selectedBarber !== "all") {
         matchesBarber = barberName === selectedBarber
       }
 
@@ -99,6 +100,180 @@ export default function AdminDashboard({ appointments, stats }: Props) {
         return a.appointment_time.localeCompare(b.appointment_time)
       })
   }, [appointments, today])
+
+  // ---------- Histórico e Faturamento ----------
+  // Initialize month state (from URL or today)
+  const [monthDate, setMonthDate] = useState(() => {
+    const param = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("month") : null
+    if (param) {
+      const parsed = new Date(param + "-01T00:00:00")
+      return isNaN(parsed.getTime()) ? new Date() : parsed
+    }
+    return new Date()
+  })
+
+  // State for filter (default "todos")
+  const [historyFilter, setHistoryFilter] = useState<"hoje" | "semana" | "mes" | "todos">("todos")
+
+
+  // Sync month, filter and barber to URL (shallow, keep scroll)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const monthParam = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`
+    params.set('month', monthParam)
+    params.set('filter', historyFilter)
+    params.set('barber', selectedBarber)
+    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false })
+  }, [monthDate, historyFilter, selectedBarber])
+
+  // Helper to sync filter state to URL (month & barber handled by effect above)
+  const syncFilterToUrl = (filter: typeof historyFilter) => {
+    const params = new URLSearchParams(window.location.search)
+    params.set('filter', filter)
+    // Preserve current month and barber
+    const monthParam = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`
+    params.set('month', monthParam)
+    params.set('barber', selectedBarber)
+    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false })
+  }
+
+  // Update filter and URL when user selects a filter
+  const handleFilterChange = (f: typeof historyFilter) => {
+    setHistoryFilter(f)
+    syncFilterToUrl(f)
+  }
+
+  // Detect if the selected month is the current month
+  const isCurrentMonth = useMemo(() => {
+    const now = new Date()
+    return now.getFullYear() === monthDate.getFullYear() && now.getMonth() === monthDate.getMonth()
+  }, [monthDate])
+
+  // Central month range (start/end ISO strings) for the selected month
+  // List of unique barbers for filter dropdown
+  const barbers = useMemo(() => {
+    const set = new Set<string>()
+    appointments.forEach((a) => {
+      const name = a.professional?.name
+      if (name) set.add(name)
+    })
+    return Array.from(set).sort()
+  }, [appointments])
+
+  // Central month range (start/end ISO strings) for the selected month
+  const monthRange = useMemo(() => {
+    const year = monthDate.getFullYear()
+    const month = monthDate.getMonth()
+    const start = new Date(year, month, 1)
+    const end = new Date(year, month + 1, 0)
+    const fmt = (d: Date) => d.toISOString().split("T")[0]
+    return { start: fmt(start), end: fmt(end) }
+  }, [monthDate])
+
+
+
+
+
+  // Helper to get start/end of week (Monday‑Sunday) based on a given date string (YYYY‑MM‑DD)
+  const getWeekBounds = (dateStr: string) => {
+    const d = new Date(dateStr + "T00:00:00")
+    const day = d.getDay()
+    const diffToMonday = (day + 6) % 7 // 0 (Sun) -> 6, 1 (Mon) -> 0, etc.
+    const monday = new Date(d)
+    monday.setDate(d.getDate() - diffToMonday)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    const fmt = (dt: Date) => dt.toISOString().split("T")[0]
+    return { start: fmt(monday), end: fmt(sunday) }
+  }
+
+  // getMonthBounds removed – monthRange memo now provides start/end for the selected month
+
+  // Helper to build a date string (YYYY-MM-DD) based on the selected month context and a specific day number
+  const buildSelectedDate = (day: number) => {
+    const year = monthDate.getFullYear()
+    const month = monthDate.getMonth() // 0‑based
+    // Create date; if day exceeds month length, Date will roll over – clamp to last day of month
+    const date = new Date(year, month, day)
+    const iso = date.toISOString().split("T")[0]
+    return iso
+  }
+
+   // List of completed appointments filtered by the selected period, respecting the selected month (monthDate)
+  const historyAppointments = useMemo(() => {
+    const completed = appointments.filter((a) => a.status === "completed")
+    const filterByBarber = (list: typeof completed) => {
+      return selectedBarber === "all" ? list : list.filter((a) => a.professional?.name === selectedBarber)
+    }
+    if (historyFilter === "hoje") {
+      // Use today's day of month but within the selected month
+      const selectedToday = buildSelectedDate(new Date().getDate())
+      const result = completed.filter((a) => a.appointment_date === selectedToday)
+      return filterByBarber(result)
+    }
+    if (historyFilter === "semana") {
+      const day = new Date().getDate()
+      const selectedDay = buildSelectedDate(day)
+      const { start, end } = getWeekBounds(selectedDay)
+      // Ensure we stay inside the selected month as well
+      const { start: monthStart, end: monthEnd } = monthRange
+      const weekStart = start > monthStart ? start : monthStart
+      const weekEnd = end < monthEnd ? end : monthEnd
+      const result = completed.filter((a) => a.appointment_date >= weekStart && a.appointment_date <= weekEnd)
+      return filterByBarber(result)
+    }
+    if (historyFilter === "mes") {
+      const { start, end } = monthRange
+      const result = completed.filter((a) => a.appointment_date >= start && a.appointment_date <= end)
+      return filterByBarber(result)
+    }
+    // "todos" – restrict to selected month and barber
+    const { start, end } = monthRange
+    const result = completed.filter((a) => a.appointment_date >= start && a.appointment_date <= end)
+    return filterByBarber(result)
+  }, [appointments, historyFilter, monthRange, selectedBarber])
+
+  // Revenue calculations – always based on *completed* appointments, using the same bounds as above and respecting the selected month
+  // Métricas de faturamento e quantidade de atendimentos no mês selecionado
+const monthCount = useMemo(() => {
+  const { start, end } = monthRange
+  const filtered = appointments.filter((a) => a.status === "completed" && a.appointment_date >= start && a.appointment_date <= end)
+  return selectedBarber === "all" ? filtered.length : filtered.filter((a) => a.professional?.name === selectedBarber).length
+}, [appointments, monthRange, selectedBarber])
+
+const historyRevenue = useMemo(() => {
+    const sum = (list: Appointment[]) =>
+      list.reduce((acc, a) => acc + (a.total_price || 0), 0)
+    // Helper to apply barber filter
+    const applyBarber = (list: Appointment[]) =>
+      selectedBarber === "all" ? list : list.filter((a) => a.professional?.name === selectedBarber)
+    // Hoje (within selected month)
+    const selectedToday = buildSelectedDate(new Date().getDate())
+    const hojeRaw = appointments.filter((a) => a.status === "completed" && a.appointment_date === selectedToday)
+    const hoje = applyBarber(hojeRaw)
+    // Semana (within selected month)
+    const day = new Date().getDate()
+    const selectedDay = buildSelectedDate(day)
+    const { start: weekStartRaw, end: weekEndRaw } = getWeekBounds(selectedDay)
+    const { start: monthStart, end: monthEnd } = monthRange
+    const weekStart = weekStartRaw > monthStart ? weekStartRaw : monthStart
+    const weekEnd = weekEndRaw < monthEnd ? weekEndRaw : monthEnd
+    const semanaRaw = appointments.filter((a) => a.status === "completed" && a.appointment_date >= weekStart && a.appointment_date <= weekEnd)
+    const semana = applyBarber(semanaRaw)
+    // Mês (selected month)
+    const { start: monthStartFull, end: monthEndFull } = monthRange
+    const mesRaw = appointments.filter((a) => a.status === "completed" && a.appointment_date >= monthStartFull && a.appointment_date <= monthEndFull)
+    const mes = applyBarber(mesRaw)
+    // Total (all completed) – also respect barber filter
+    const totalRaw = appointments.filter((a) => a.status === "completed")
+    const total = applyBarber(totalRaw)
+    return {
+      hoje: sum(hoje),
+      semana: sum(semana),
+      mes: sum(mes),
+      total: sum(total),
+    }
+  }, [appointments, monthRange, selectedBarber])
 
   const handleStatusChange = async (
     id: string,
@@ -205,20 +380,11 @@ export default function AdminDashboard({ appointments, stats }: Props) {
               >
                 Cancelados ({tabCounts.cancelados})
               </button>
-              <button
-                onClick={() => setActiveTab("todos")}
-                className={`text-xs font-semibold uppercase pb-2 px-2 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === "todos"
-                    ? "border-neutral-200 text-neutral-200"
-                    : "border-transparent text-neutral-400 hover:text-neutral-200"
-                }`}
-              >
-                Ver Tudo ({tabCounts.todos})
-              </button>
+
             </div>
           </div>
 
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
             {sortedAppointments.length === 0 ? (
               <EmptyState 
                 icon={<Calendar className="w-6 h-6 mx-auto mb-2 text-neutral-600" />} 
@@ -240,21 +406,112 @@ export default function AdminDashboard({ appointments, stats }: Props) {
 
         {/* Próximos Compromissos (Outros Dias) */}
         <section className="bg-neutral-900/50 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
-          <div className="p-4 border-b border-white/5">
-            <h2 className="text-sm font-bold text-neutral-300 flex items-center gap-2">
-              <Scissors className="w-4 h-4 text-neutral-400" />
-              Próximos Compromissos (Outros Dias)
-            </h2>
-          </div>
+<div className="flex items-center justify-between p-4 border-b border-white/5">
+               <h2 className="text-sm font-bold text-neutral-300 flex items-center gap-2">
+                 <Scissors className="w-4 h-4 text-neutral-400" />
+                 Histórico e Faturamento
+               </h2>
+               <div className="bg-neutral-950 p-2 rounded-xl text-center">
+                 <p className="text-xs text-neutral-400">Total</p>
+                 <p className="text-amber-400 font-bold text-lg" data-testid="total-revenue">{formatCurrency(historyRevenue.total)}</p>
+               </div>
+             </div>
+
+          {/* Filtros de período */}
+{/* Seletor de mês centralizado e destacado */}
+<div className="flex items-center justify-center gap-4 border-b border-white/5 pb-2 px-4">
+  <button
+onClick={() => setMonthDate(prev => { const d = new Date(prev); d.setMonth(d.getMonth() - 1); return d; })}
+    className="p-2 text-neutral-400 hover:text-amber-400"
+    aria-label="Mês anterior"
+  >
+    <ChevronLeft className="w-6 h-6" />
+  </button>
+  <span className="text-lg font-medium text-neutral-400">
+    {monthDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+  </span>
+  <button
+onClick={() => setMonthDate(prev => { const d = new Date(prev); d.setMonth(d.getMonth() + 1); return d; })}
+    className="p-2 text-neutral-400 hover:text-amber-400"
+    aria-label="Próximo mês"
+  >
+    <ChevronRight className="w-6 h-6" />
+  </button>
+</div>
+
+{/* Filtro de barbeiro */}
+<div className="flex items-center justify-center gap-2 mb-2">
+  <label htmlFor="barber-select" className="text-xs text-neutral-400">Barbeiro:</label>
+  <select
+    id="barber-select"
+    value={selectedBarber}
+    onChange={(e) => setSelectedBarber(e.target.value)}
+    className="bg-neutral-950 text-neutral-400 p-1 rounded"
+  >
+    <option value="all">Todos os Barbeiros</option>
+    {barbers.map((b) => (
+      <option key={b} value={b}>{b}</option>
+    ))}
+  </select>
+</div>
+
+{/* Filtros de período (Hoje | Semana | Mês) */}
+{isCurrentMonth && (
+  <div className="flex justify-center gap-4 border-b border-white/5 pb-2 px-4">
+    {(["hoje", "semana", "mes"] as const).map((f) => (
+      <button
+        key={f}
+        onClick={() => handleFilterChange(f)}
+        className={`text-xs font-semibold uppercase pb-2 px-2 border-b-2 transition-all whitespace-nowrap ${
+          historyFilter === f
+            ? "border-amber-400 text-amber-400"
+            : "border-transparent text-neutral-400 hover:text-neutral-200"
+        }`}
+      >
+        {f.charAt(0).toUpperCase() + f.slice(1)}
+      </button>
+    ))}
+  </div>
+)}
+
+{/* Resumo de faturamento */}
+{isCurrentMonth ? (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
+    <div className="bg-neutral-950 p-3 rounded-xl text-center">
+      <p className="text-xs text-neutral-400">Hoje</p>
+      <p className="text-amber-400 font-bold text-lg">{formatCurrency(historyRevenue.hoje)}</p>
+    </div>
+    <div className="bg-neutral-950 p-3 rounded-xl text-center">
+      <p className="text-xs text-neutral-400">Semana</p>
+      <p className="text-amber-400 font-bold text-lg">{formatCurrency(historyRevenue.semana)}</p>
+    </div>
+    <div className="bg-neutral-950 p-3 rounded-xl text-center">
+      <p className="text-xs text-neutral-400">Mês</p>
+      <p className="text-amber-400 font-bold text-lg">{formatCurrency(historyRevenue.mes)}</p>
+    </div>
+    <div className="bg-neutral-950 p-3 rounded-xl text-center">
+      <p className="text-xs text-neutral-400">Total</p>
+      <p className="text-amber-400 font-bold text-lg">{formatCurrency(historyRevenue.total)}</p>
+    </div>
+  </div>
+) : (
+  <div className="grid grid-cols-1 gap-4 p-4">
+    <div className="bg-neutral-950 p-3 rounded-xl text-center">
+      <p className="text-xs text-neutral-400">Mês</p>
+      <p className="text-xs text-neutral-400">{monthCount} atendimentos</p>
+      <p className="text-amber-400 font-bold text-lg">{formatCurrency(historyRevenue.mes)}</p>
+    </div>
+  </div>
+)}
 
           <div className="divide-y divide-white/5 max-h-[380px] overflow-y-auto">
-            {otherDaysAppointments.length === 0 ? (
+            {historyAppointments.length === 0 ? (
               <EmptyState 
                 icon={<Calendar className="w-6 h-6 mx-auto mb-2 text-neutral-600" />} 
-                text="Sem agendamentos para outros dias." 
+                text="Nenhum histórico encontrado para o filtro selecionado." 
               />
             ) : (
-              otherDaysAppointments.map((appointment) => (
+              historyAppointments.map((appointment) => (
                 <CompactAppointmentRow 
                   key={appointment.id} 
                   appointment={appointment} 
