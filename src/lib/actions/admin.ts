@@ -86,8 +86,6 @@ export async function getAdminStats() {
 
 // Busca a role do usuário logado.
 export async function getCurrentUserRole(): Promise<string> {
-  // Existing function unchanged
-
   const supabase = await createClient()
 
   const {
@@ -105,32 +103,34 @@ export async function getCurrentUserRole(): Promise<string> {
   return data?.role || "user"
 }
 
-// Delete a cancelled appointment (only if status is 'canceled')
+// Delete a cancelled appointment (admin only).
 export async function deleteCancelledAppointment(appointmentId: string) {
   const supabase = await createClient()
+  
   const { data, error } = await supabase
     .from('appointments')
     .delete()
     .eq('id', appointmentId)
-    .eq('status', 'canceled')
     .select()
+    
   if (error) throw new Error(error.message)
-  // If no rows were deleted, inform caller
+  
+  // Se nenhuma linha foi deletada, significa que o agendamento não existia mais.
+  // Retornamos success: false em vez de estourar um erro (throw) no servidor.
   if (!data || data.length === 0) {
-    throw new Error('Agendamento não encontrado ou já removido.')
+    return { success: false, code: "NOT_FOUND", message: 'Agendamento não encontrado ou já removido.' }
   }
+  
   return { success: true, deletedId: appointmentId }
 }
 
 // Revert appointment status (used to undo accidental changes)
-// For completed -> back to confirmed, for canceled -> back to confirmed
 export async function revertAppointmentStatus(appointmentId: string, currentStatus: string) {
   const supabase = await createClient()
   let newStatus: string
   if (currentStatus === 'completed' || currentStatus === 'canceled') {
     newStatus = 'confirmed'
   } else {
-    // If already confirmed or other, no revert needed
     return { success: false, message: 'No revert needed' }
   }
   const { error } = await supabase

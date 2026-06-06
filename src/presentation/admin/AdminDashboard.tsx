@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Calendar, Scissors, ArrowLeft, User, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { updateAppointmentStatus, deleteCancelledAppointment, revertAppointmentStatus } from "@/lib/actions/admin"
+import { updateAppointmentStatus, revertAppointmentStatus } from "@/lib/actions/admin"
 import type { Appointment } from "@/domain/entities"
 import { formatCurrency } from "@/lib/formatters"
 import { StatusBadge } from "@/presentation/widgets/StatusBadge"
@@ -579,7 +579,7 @@ interface AppointmentRowProps {
 function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBadge }: AppointmentRowProps) {
   const router = useRouter();
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
   const [showRevertConfirm, setShowRevertConfirm] = useState(false)
 
 
@@ -675,19 +675,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBad
         </div>
       )}
 
-      {appointment.status === "canceled" && (
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={async () => {
-                setShowDeleteConfirm(true)
-            }}
-            disabled={isUpdating === appointment.id}
-            className="flex-1 bg-neutral-500/10 hover:bg-neutral-500/20 text-neutral-400 border border-neutral-500/20 rounded-xl py-2.5 text-xs font-semibold transition-colors disabled:opacity-50"
-          >
-            Excluir
-          </button>
-        </div>
-      )}
+
     </div>
     {/* Revert Confirmation Modal */}
     <ConfirmModal
@@ -706,23 +694,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBad
         }
       }}
     />
-    {/* Delete Confirmation Modal */}
-    <ConfirmModal
-      open={showDeleteConfirm}
-      message="Deseja excluir este agendamento cancelado?"
-      onCancel={() => setShowDeleteConfirm(false)}
-      onConfirm={async () => {
-        try {
-          await deleteCancelledAppointment(appointment.id)
-          router.refresh()
-        } catch (e) {
-          console.error(e)
-          alert('Erro ao excluir o agendamento.')
-        } finally {
-          setShowDeleteConfirm(false)
-        }
-      }}
-    />
+
     </>
     )
 }
