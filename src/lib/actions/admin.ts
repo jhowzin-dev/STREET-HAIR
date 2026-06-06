@@ -2,6 +2,7 @@
 
 import { createClient } from "@/core/utils/supabase-server"
 import type { Appointment } from "@/domain/entities"
+import { getToday } from "@/lib/formatters"
 
 // Busca TODOS os agendamentos.
 export async function getAllAppointments(): Promise<Appointment[]> {
@@ -58,7 +59,7 @@ export async function updateAppointmentStatus(appointmentId: string, status: "co
 export async function getAdminStats() {
   const supabase = await createClient()
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = getToday()
 
   const [
     { data: totalAppointments },
@@ -85,6 +86,8 @@ export async function getAdminStats() {
 
 // Busca a role do usuário logado.
 export async function getCurrentUserRole(): Promise<string> {
+  // Existing function unchanged
+
   const supabase = await createClient()
 
   const {
@@ -100,4 +103,41 @@ export async function getCurrentUserRole(): Promise<string> {
     .single()
 
   return data?.role || "user"
+}
+
+// Delete a cancelled appointment (only if status is 'canceled')
+export async function deleteCancelledAppointment(appointmentId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('appointments')
+    .delete()
+    .eq('id', appointmentId)
+    .eq('status', 'canceled')
+    .select()
+  if (error) throw new Error(error.message)
+  // If no rows were deleted, inform caller
+  if (!data || data.length === 0) {
+    throw new Error('Agendamento não encontrado ou já removido.')
+  }
+  return { success: true, deletedId: appointmentId }
+}
+
+// Revert appointment status (used to undo accidental changes)
+// For completed -> back to confirmed, for canceled -> back to confirmed
+export async function revertAppointmentStatus(appointmentId: string, currentStatus: string) {
+  const supabase = await createClient()
+  let newStatus: string
+  if (currentStatus === 'completed' || currentStatus === 'canceled') {
+    newStatus = 'confirmed'
+  } else {
+    // If already confirmed or other, no revert needed
+    return { success: false, message: 'No revert needed' }
+  }
+  const { error } = await supabase
+    .from('appointments')
+    .update({ status: newStatus })
+    .eq('id', appointmentId)
+    .eq('status', currentStatus)
+  if (error) throw new Error(error.message)
+  return { success: true, newStatus }
 }

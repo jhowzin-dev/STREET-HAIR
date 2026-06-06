@@ -4,11 +4,13 @@ import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Calendar, Scissors, ArrowLeft, User, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { updateAppointmentStatus } from "@/lib/actions/admin"
+import { updateAppointmentStatus, deleteCancelledAppointment, revertAppointmentStatus } from "@/lib/actions/admin"
 import type { Appointment } from "@/domain/entities"
 import { formatCurrency } from "@/lib/formatters"
 import { StatusBadge } from "@/presentation/widgets/StatusBadge"
 import { Spinner } from "@/components/ui/Spinner"
+import ConfirmModal from "@/components/ui/ConfirmModal"
+import { getToday, formatFull } from "@/lib/formatters"
 
 interface DashboardStats {
   totalAppointments: number
@@ -25,7 +27,8 @@ interface Props {
 export default function AdminDashboard({ appointments, stats }: Props) {
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const router = useRouter()
-  const today = new Date().toISOString().split("T")[0]
+
+  const today = getToday()
 
   // Estados dos filtros da parte de cima
    const [selectedBarber, setSelectedBarber] = useState<string>("all")
@@ -43,7 +46,7 @@ export default function AdminDashboard({ appointments, stats }: Props) {
   const tabCounts = useMemo(() => {
     const barberFiltered = appointments.filter((appointment) => {
        if (selectedBarber === "all") return true
-      return (appointment.professional?.name || "") === selectedBarber
+        return (appointment.professional?.name || "") === selectedBarber
     })
 
      return {
@@ -79,27 +82,22 @@ export default function AdminDashboard({ appointments, stats }: Props) {
     })
   }, [appointments, activeTab, selectedBarber, today])
 
-  const sortedAppointments = useMemo(() => {
-    return [...filteredAppointments].sort((a, b) => {
-      // Se não for a aba de hoje, ordena primeiro por data e depois por hora
-      if (activeTab !== "hoje") {
-        const dateCompare = a.appointment_date.localeCompare(b.appointment_date)
-        if (dateCompare !== 0) return dateCompare
-      }
-      return a.appointment_time.localeCompare(b.appointment_time)
-    })
-  }, [filteredAppointments, activeTab])
-
-  // Filtro para a seção inferior: Outros dias (sem ser hoje)
-  const otherDaysAppointments = useMemo(() => {
+  // Próximos Agendamentos (dias futuros)
+  const futureAppointments = useMemo(() => {
     return appointments
-      .filter((appointment) => appointment.appointment_date !== today)
+      .filter((a) => a.appointment_date > today)
       .sort((a, b) => {
         const dateCompare = a.appointment_date.localeCompare(b.appointment_date)
         if (dateCompare !== 0) return dateCompare
         return a.appointment_time.localeCompare(b.appointment_time)
       })
   }, [appointments, today])
+
+  const sortedAppointments = useMemo(() => {
+    // Always sort by time ascending for the selected day
+    return [...filteredAppointments].sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
+  }, [filteredAppointments])
+
 
   // ---------- Histórico e Faturamento ----------
   // Initialize month state (from URL or today)
@@ -322,11 +320,7 @@ const historyRevenue = useMemo(() => {
                   Controle de Agendamentos
                 </h2>
                 <p className="text-neutral-400 text-xs mt-0.5 capitalize">
-                  {new Date().toLocaleDateString("pt-BR", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })}
+{formatFull(today)}
                 </p>
               </div>
 
@@ -402,10 +396,38 @@ const historyRevenue = useMemo(() => {
               ))
             )}
           </div>
-        </section>
+</section>
 
-        {/* Próximos Compromissos (Outros Dias) */}
-        <section className="bg-neutral-900/50 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
+          {/* Próximos Agendamentos (dias futuros) */}
+          <section className="bg-neutral-900/50 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm mt-6">
+            <div className="p-4 border-b border-white/5">
+              <h2 className="text-sm font-bold text-neutral-300 flex items-center gap-2">
+                <Scissors className="w-4 h-4 text-neutral-400" />
+                Próximos Agendamentos
+              </h2>
+            </div>
+            <div className="divide-y divide-white/5 max-h-[380px] overflow-y-auto">
+              {futureAppointments.length === 0 ? (
+                <EmptyState
+                  icon={<Calendar className="w-6 h-6 mx-auto mb-2 text-neutral-600" />}
+                  text="Nenhum agendamento futuro encontrado."
+                />
+              ) : (
+                futureAppointments.map((appointment) => (
+                  <AppointmentRow
+                    key={appointment.id}
+                    appointment={appointment}
+                    isUpdating={isUpdating}
+                    onStatusChange={handleStatusChange}
+                    showDateInBadge={true}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+
+          {/* Próximos Compromissos (Outros Dias) */}
+          <section className="bg-neutral-900/50 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
 <div className="flex items-center justify-between p-4 border-b border-white/5">
                <h2 className="text-sm font-bold text-neutral-300 flex items-center gap-2">
                  <Scissors className="w-4 h-4 text-neutral-400" />
@@ -521,9 +543,11 @@ onClick={() => setMonthDate(prev => { const d = new Date(prev); d.setMonth(d.get
               ))
             )}
           </div>
-        </section>
-      </div>
-    </main>
+</section>
+
+
+          </div>
+     </main>
   )
 }
 
@@ -543,6 +567,7 @@ function EmptyState({ icon, text }: EmptyStateProps) {
   )
 }
 
+
 interface AppointmentRowProps {
   appointment: Appointment
   isUpdating: string | null
@@ -552,6 +577,12 @@ interface AppointmentRowProps {
 
 // Card Principal de Agendamento
 function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBadge }: AppointmentRowProps) {
+  const router = useRouter();
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showRevertConfirm, setShowRevertConfirm] = useState(false)
+
+
   const clientPhone = (appointment as any).client_phone
   const designatedBarber = appointment.professional?.name || "Não atribuído"
 
@@ -562,7 +593,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBad
     return `${day}/${month}`
   }, [appointment.appointment_date])
 
-  return (
+  return (<>
     <div className="p-4 hover:bg-white/[0.02] transition-colors">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -607,7 +638,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBad
         </span>
       </div>
 
-      {appointment.status === "confirmed" && (
+        {appointment.status === "confirmed" && (
         <div className="flex gap-2 mt-4">
           <button
             onClick={() => onStatusChange(appointment.id, "completed")}
@@ -629,9 +660,73 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBad
           </button>
         </div>
       )}
+      {/* Revert status button for completed or canceled */}
+      {(appointment.status === "completed" || appointment.status === "canceled") && (
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={async () => {
+                setShowRevertConfirm(true)
+            }}
+            disabled={isUpdating === appointment.id}
+            className="flex-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl py-2.5 text-xs font-semibold transition-colors disabled:opacity-50"
+          >
+            Reverter
+          </button>
+        </div>
+      )}
+
+      {appointment.status === "canceled" && (
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={async () => {
+                setShowDeleteConfirm(true)
+            }}
+            disabled={isUpdating === appointment.id}
+            className="flex-1 bg-neutral-500/10 hover:bg-neutral-500/20 text-neutral-400 border border-neutral-500/20 rounded-xl py-2.5 text-xs font-semibold transition-colors disabled:opacity-50"
+          >
+            Excluir
+          </button>
+        </div>
+      )}
     </div>
-  )
+    {/* Revert Confirmation Modal */}
+    <ConfirmModal
+      open={showRevertConfirm}
+      message="Deseja reverter o status deste agendamento?"
+      onCancel={() => setShowRevertConfirm(false)}
+      onConfirm={async () => {
+        try {
+          await revertAppointmentStatus(appointment.id, appointment.status)
+          router.refresh()
+        } catch (e) {
+          console.error(e)
+          alert('Erro ao reverter o status.')
+        } finally {
+          setShowRevertConfirm(false)
+        }
+      }}
+    />
+    {/* Delete Confirmation Modal */}
+    <ConfirmModal
+      open={showDeleteConfirm}
+      message="Deseja excluir este agendamento cancelado?"
+      onCancel={() => setShowDeleteConfirm(false)}
+      onConfirm={async () => {
+        try {
+          await deleteCancelledAppointment(appointment.id)
+          router.refresh()
+        } catch (e) {
+          console.error(e)
+          alert('Erro ao excluir o agendamento.')
+        } finally {
+          setShowDeleteConfirm(false)
+        }
+      }}
+    />
+    </>
+    )
 }
+
 
 interface CompactAppointmentRowProps {
   appointment: Appointment
