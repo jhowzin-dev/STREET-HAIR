@@ -65,7 +65,7 @@ export function MenuSheet() {
       label: "Endereço",
       description: "Ver no mapa",
       onClick: () => {
-        window.open("https://maps.app.goo.gl/gr9YS25fXEMbgCu77", "_blank");
+        window.open("https://maps.app.goo.gl/abckH8jxWZDBSJd68", "_blank");
         setIsOpen(false);
       },
     },
