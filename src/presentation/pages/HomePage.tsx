@@ -43,7 +43,7 @@ export default function HomePage() {
               <span className="text-white text-[11px] font-medium">Endereço</span>
             </div>
             <p className="text-[10px] text-white/80 leading-relaxed text-xs">
-              R. P Viêira da Silva<br />
+              Rua Arnaldo Mendes de Freitas 140<br />
               Vila Louro, Embu-Guaçu, SP
             </p>
           </div>
