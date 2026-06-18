@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
-import { getAllAppointmentsWithClients, getAdminStats, getCurrentUserRole } from "@/lib/actions/analises"
+import { getAllAppointmentsWithClients } from "@/lib/actions/analises"
+import { getAdminStats, getCurrentUserRole } from "@/lib/actions/admin"
 import AdminDashboard from "@/presentation/admin/AdminDashboard"
 
 export default async function AdminPage() {
@@ -10,7 +11,7 @@ export default async function AdminPage() {
   }
 
   const [appointments, stats] = await Promise.all([
-    getAllAppointments(),
+    getAllAppointmentsWithClients(),
     getAdminStats(),
   ])
 

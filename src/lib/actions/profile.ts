@@ -53,14 +53,15 @@ return {
     }
   }
 
-  return {
-    id: user.id,
-    full_name: fullName,
-    email: user.email ?? null,
-    phone: null,
-    avatar_url: null,
-    role: "client",
-  }
+return {
+  id: user.id,
+  full_name: fullName,
+  email: user.email ?? null,
+  phone: null,
+  avatar_url: null,
+  role: "client",
+  notification_preferences: { reminders: false, promotions: false, news: false },
+}
 }
 
 export async function updateProfile(updates: {
