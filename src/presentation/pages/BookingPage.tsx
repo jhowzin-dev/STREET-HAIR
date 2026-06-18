@@ -397,7 +397,7 @@ export default function BookingPage() {
   )
 }
 
-/* --- Sub-components permanecem os mesmos --- */
+/* --- Sub-components --- */
 interface BarberCardProps {
   barber: Professional
   index: number
@@ -406,6 +406,9 @@ interface BarberCardProps {
 }
 
 function BarberCard({ barber, isSelected, onSelect }: BarberCardProps) {
+  const firstName = barber.name.split(" ")[0].toLowerCase()
+  const imageSrc = `/${firstName}.png`
+
   return (
     <div
       onClick={onSelect}
@@ -418,7 +421,22 @@ function BarberCard({ barber, isSelected, onSelect }: BarberCardProps) {
           isSelected ? "ring-2 ring-white" : ""
         }`}
       >
-        <div className="w-full h-full bg-neutral-400" />
+        <img 
+          src={imageSrc} 
+          alt={barber.name} 
+          className="w-full h-full object-cover object-[center_20%]" // Mantém as duas fotos centralizadas na mesma altura
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+            if (fallback) fallback.style.display = 'flex';
+          }}
+        />
+
+        {/* Fallback cinza reserva */}
+        <div className="hidden w-full h-full bg-neutral-700 items-center justify-center text-white/30 text-[10px] text-center p-1 font-medium uppercase">
+          {firstName}
+        </div>
+
         {isSelected && (
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
             <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">

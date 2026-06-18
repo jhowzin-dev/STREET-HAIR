@@ -53,7 +53,6 @@ export default function AppointmentsPage() {
   }
 
   const isPastOrCompleted = (a: Appointment) => {
-    // CORREÇÃO: Evita que o parse inverta o dia devido ao fuso UTC
     const date = parse(a.appointment_date, "yyyy-MM-dd", new Date())
     const now = new Date()
     const isCompleted = a.status === "completed"
