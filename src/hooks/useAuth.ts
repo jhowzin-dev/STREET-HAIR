@@ -130,9 +130,13 @@ export function useAuth(): UseAuthReturn {
     }
   }, [])
 
-  const handleLogout = useCallback(async () => {
+const handleLogout = useCallback(async () => {
+  try {
     await signOut()
-  }, [])
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Erro ao sair")
+  }
+}, [])
 
   const checkAdminRole = useCallback(async (): Promise<boolean> => {
     try {

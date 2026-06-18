@@ -24,6 +24,7 @@ export function parseCurrency(value: string): number {
 }
 
 export function formatDate(date: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return ''
   // Format full date (e.g., 5 de junho de 2026) using the app timezone
   return new Date(date + "T00:00:00").toLocaleDateString("pt-BR", {
     day: "numeric",
@@ -36,6 +37,7 @@ export function formatDate(date: string): string {
    // Formata uma data ISO para formato curto
  
 export function formatDateShort(date: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return ''
   // Short date (dd/mm) respecting app timezone
   return new Date(date + "T00:00:00").toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -52,6 +54,7 @@ export function todayStr(): string {
    // Formata um horário (HH:MM:SS) para formato curto
 
 export function formatFull(date: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return ''
   // Full date with weekday (e.g., "sexta-feira, 5 de junho de 2026")
   return new Date(date + "T00:00:00").toLocaleDateString("pt-BR", {
     weekday: "long",

@@ -12,7 +12,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const supabase = createClient()
 
-    async function checkAndRedirect(session: any) {
+    async function checkAndRedirect(session: { user: { id: string } }) {
       try {
         // Marca e-mail como verificado para usuários do Google (email já é verificado pelo provedor)
         const { data: profile } = await supabase

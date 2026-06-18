@@ -189,7 +189,16 @@ export default function AboutPage() {
             ].map((item) => (
               <li key={item} className="flex items-start gap-2">
                 <span className="text-amber-500 text-lg leading-none mt-0.5">▸</span>
-                <span dangerouslySetInnerHTML={{ __html: item.replace(/(.*?)-\s/, "<strong class='text-white'>$1</strong> - ") }} />
+                {(() => {
+  const parts = item.split(/-\s+/);
+  const before = parts.shift() ?? '';
+  const after = parts.join(' - ');
+  return (
+    <>
+      <strong className="text-white">{before}</strong> - {after}
+    </>
+  );
+})()}
               </li>
             ))}
           </ul>

@@ -276,7 +276,15 @@ export default function ProfilePage() {
   const totalCuts = appointments.length
   const lastCut = appointments[appointments.length - 1]
 
-  const MenuItem = ({ icon, title, subtitle, onClick, danger }: any) => (
+  interface MenuItemProps {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  onClick: () => void;
+  danger?: boolean;
+}
+
+const MenuItem = ({ icon, title, subtitle, onClick, danger = false }: MenuItemProps) => (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors ${danger ? "text-red-400" : ""}`}
@@ -292,7 +300,12 @@ export default function ProfilePage() {
     </button>
   )
 
-  const Toggle = ({ checked, onChange }: any) => (
+  interface ToggleProps {
+  checked: boolean;
+  onChange: () => void;
+}
+
+const Toggle = ({ checked, onChange }: ToggleProps) => (
     <button
       onClick={onChange}
       className={`w-12 h-6 rounded-full transition-colors ${checked ? "bg-amber-500" : "bg-neutral-700"}`}

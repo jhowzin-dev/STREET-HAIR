@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Calendar, Scissors, ArrowLeft, User, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { updateAppointmentStatus, revertAppointmentStatus } from "@/lib/actions/admin"
 import type { Appointment } from "@/domain/entities"
+import type { AppointmentWithClient } from "@/lib/actions/analises"
 import { formatCurrency } from "@/lib/formatters"
 import { StatusBadge } from "@/presentation/widgets/StatusBadge"
 import { Spinner } from "@/components/ui/Spinner"
@@ -20,7 +22,7 @@ interface DashboardStats {
 }
 
 interface Props {
-  appointments: Appointment[]
+  appointments: AppointmentWithClient[]
   stats: DashboardStats
 }
 
@@ -346,31 +348,37 @@ const historyRevenue = useMemo(() => {
             <div className="flex gap-2 border-b border-white/5 pb-1 overflow-x-auto scrollbar-none">
               <button
                 onClick={() => setActiveTab("hoje")}
-                className={`text-xs font-semibold uppercase pb-2 px-2 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === "hoje"
-                    ? "border-amber-400 text-amber-400"
-                    : "border-transparent text-neutral-400 hover:text-neutral-200"
-                }`}
+className={cn(
+  "text-xs font-semibold uppercase pb-2 px-2 border-b-2 transition-all whitespace-nowrap",
+  {
+    "border-amber-400 text-amber-400": activeTab === "hoje",
+    "border-transparent text-neutral-400 hover:text-neutral-200": activeTab !== "hoje",
+  }
+)}
               >
                 Para Hoje ({tabCounts.hoje})
               </button>
               <button
                 onClick={() => setActiveTab("concluidos")}
-                className={`text-xs font-semibold uppercase pb-2 px-2 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === "concluidos"
-                    ? "border-emerald-500 text-emerald-400"
-                    : "border-transparent text-neutral-400 hover:text-neutral-200"
-                }`}
+className={cn(
+  "text-xs font-semibold uppercase pb-2 px-2 border-b-2 transition-all whitespace-nowrap",
+  {
+    "border-emerald-500 text-emerald-400": activeTab === "concluidos",
+    "border-transparent text-neutral-400 hover:text-neutral-200": activeTab !== "concluidos",
+  }
+)}
               >
                 Cortes Já Foram ({tabCounts.concluidos})
               </button>
               <button
                 onClick={() => setActiveTab("cancelados")}
-                className={`text-xs font-semibold uppercase pb-2 px-2 border-b-2 transition-all whitespace-nowrap ${
-                  activeTab === "cancelados"
-                    ? "border-rose-500 text-rose-400"
-                    : "border-transparent text-neutral-400 hover:text-neutral-200"
-                }`}
+className={cn(
+  "text-xs font-semibold uppercase pb-2 px-2 border-b-2 transition-all whitespace-nowrap",
+  {
+    "border-rose-500 text-rose-400": activeTab === "cancelados",
+    "border-transparent text-neutral-400 hover:text-neutral-200": activeTab !== "cancelados",
+  }
+)}
               >
                 Cancelados ({tabCounts.cancelados})
               </button>
@@ -583,7 +591,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBad
   const [showRevertConfirm, setShowRevertConfirm] = useState(false)
 
 
-  const clientPhone = (appointment as any).client_phone
+  const clientPhone = appointment.client_phone
   const designatedBarber = appointment.professional?.name || "Não atribuído"
 
   // Formata a data para "DD/MM" caso precise exibir no quadrado
@@ -605,7 +613,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBad
           </div>
           <div>
             <p className="text-neutral-100 font-semibold text-sm">
-              {(appointment as any).client_name || "Cliente sem nome"}
+              {appointment.client_name || "Cliente sem nome"}
               {/* Se estiver mostrando a data no badge, joga a hora pra cá com o pontinho igual ao seu print */}
               {showDateInBadge && (
                 <span className="text-neutral-500 text-xs font-normal ml-1.5">
@@ -709,7 +717,7 @@ interface CompactAppointmentRowProps {
 // Card Compacto de Outros Dias
 function CompactAppointmentRow({ appointment, isUpdating, onCancel }: CompactAppointmentRowProps) {
   const date = new Date(appointment.appointment_date + "T00:00:00")
-  const clientPhone = (appointment as any).client_phone
+  const clientPhone = appointment.client_phone
   const designatedBarber = appointment.professional?.name || "Não atribuído"
 
   return (
@@ -723,7 +731,7 @@ function CompactAppointmentRow({ appointment, isUpdating, onCancel }: CompactApp
           </div>
           <div className="min-w-0">
             <p className="text-neutral-200 text-sm font-semibold truncate">
-              {(appointment as any).client_name || "Cliente sem nome"}{" "}
+              {appointment.client_name || "Cliente sem nome"}{" "}
               <span className="text-neutral-500 text-xs font-normal ml-1">
                 • {appointment.appointment_time}
               </span>
