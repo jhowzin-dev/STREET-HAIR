@@ -19,11 +19,12 @@ export async function getProfile(): Promise<UserProfile | null> {
 
   // Se perfil existe, retorna mesclado com email
   if (data && !error) {
-    return {
-      ...data,
-      email: user.email,
-      role: data.role || "user",
-    }
+return {
+       ...data,
+       email: user.email ?? null,
+       role: data.role || "client",
+       notification_preferences: data.notification_preferences || { reminders: false, promotions: false, news: false },
+     }
   }
 
   console.warn("Perfil não encontrado para o usuário:", user.id, "Criando perfil fallback...")
@@ -36,28 +37,29 @@ export async function getProfile(): Promise<UserProfile | null> {
     full_name: fullName,
     phone: null,
     avatar_url: null,
-    role: "user",
+    role: "client",
   })
 
   if (insertError) {
     console.error("Erro ao criar perfil fallback:", insertError)
-    return {
+return {
       id: user.id,
       full_name: fullName,
-      email: user.email,
+      email: user.email ?? null,
       phone: null,
       avatar_url: null,
-      role: "user",
+      role: "client",
+      notification_preferences: { reminders: false, promotions: false, news: false },
     }
   }
 
   return {
     id: user.id,
     full_name: fullName,
-    email: user.email,
+    email: user.email ?? null,
     phone: null,
     avatar_url: null,
-    role: "user",
+    role: "client",
   }
 }
 

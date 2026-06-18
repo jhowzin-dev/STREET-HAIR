@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { getAllAppointments, getAdminStats, getCurrentUserRole } from "@/lib/actions/admin"
+import { getAllAppointmentsWithClients, getAdminStats, getCurrentUserRole } from "@/lib/actions/analises"
 import AdminDashboard from "@/presentation/admin/AdminDashboard"
 
 export default async function AdminPage() {

@@ -577,7 +577,7 @@ function EmptyState({ icon, text }: EmptyStateProps) {
 
 
 interface AppointmentRowProps {
-  appointment: Appointment
+  appointment: AppointmentWithClient
   isUpdating: string | null
   onStatusChange: (id: string, status: "confirmed" | "canceled" | "completed") => void
   showDateInBadge: boolean // Nova prop para controlar o comportamento visual
@@ -709,7 +709,7 @@ function AppointmentRow({ appointment, isUpdating, onStatusChange, showDateInBad
 
 
 interface CompactAppointmentRowProps {
-  appointment: Appointment
+  appointment: AppointmentWithClient
   isUpdating: string | null
   onCancel: (id: string, status: "confirmed" | "canceled" | "completed") => void
 }
