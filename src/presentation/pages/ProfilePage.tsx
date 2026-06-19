@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, memo } from "react"
 import { User, Calendar, Scissors, Bell, ChevronRight, FileText, Shield, Camera, X, Check, LogOut } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { TopHeader } from "../widgets/TopHeader"
 import { BottomNavigationBar } from "../widgets/BottomNavigationBar"
 import { getProfile, updateProfile } from "@/lib/actions/profile"
@@ -47,6 +48,59 @@ const NameInput = memo(function NameInput({
       disabled={disabled}
       className="w-full bg-neutral-800 text-white p-4 rounded-xl border border-white/10 focus:border-amber-500 outline-none mb-4"
     />
+  )
+})
+
+// ── Componente de Modal para Termos e Políticas (Novo) ──
+const LegalModal = memo(function LegalModal({
+  isOpen,
+  type,
+  onClose,
+}: {
+  isOpen: boolean
+  type: "terms" | "privacy" | null
+  onClose: () => void
+}) {
+  if (!isOpen || !type) return null
+
+  const isTerms = type === "terms"
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-end justify-center z-50 p-4 animate-in fade-in duration-200">
+      <div className="bg-neutral-900 w-full max-w-md rounded-3xl p-6 max-h-[80vh] flex flex-col border border-white/5">
+        <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4">
+          <h3 className="text-white text-lg font-semibold flex items-center gap-2">
+            {isTerms ? <FileText className="w-5 h-5 text-amber-500" /> : <Shield className="w-5 h-5 text-amber-500" />}
+            {isTerms ? "Termos de Uso" : "Política de Privacidade"}
+          </h3>
+          <button onClick={onClose} className="p-2 bg-neutral-800 rounded-full hover:bg-neutral-750 transition-colors">
+            <X className="w-4 h-4 text-white/60" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-1 text-sm text-white/70 space-y-4 leading-relaxed scrollbar-thin">
+          {isTerms ? (
+            <>
+              <p className="font-medium text-white">1. Aceitação dos Termos</p>
+              <p>Ao acessar o Street Hair, você concorda em cumprir estes termos de serviço e todas as leis aplicáveis.</p>
+              <p className="font-medium text-white">2. Agendamentos e Cancelamentos</p>
+              <p>Os agendamentos são de responsabilidade do usuário. Caso não possa comparecer, realize o cancelamento prévio pelo aplicativo com antecedência para liberar o horário.</p>
+              <p className="font-medium text-white">3. Modificações no Serviço</p>
+              <p>Reservamos o direito de modificar ou descontinuar o serviço temporariamente por motivos de manutenção programada.</p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-white">1. Coleta de Informações</p>
+              <p>Coletamos informações básicas como seu nome completo, e-mail e número de telefone para garantir a segurança e a realização dos seus agendamentos na barbearia.</p>
+              <p className="font-medium text-white">2. Uso dos Dados</p>
+              <p>Seus dados são armazenados de forma criptografada e segura, sendo utilizados exclusivamente para gerenciar seu histórico de cortes e enviar lembretes importantes.</p>
+              <p className="font-medium text-white">3. Seus Direitos</p>
+              <p>Você possui total controle sobre seus dados e pode alterá-los ou solicitar a exclusão da sua conta a qualquer momento direto pela tela de configurações.</p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 })
 
@@ -99,7 +153,6 @@ const EditModal = memo(function EditModal({
     }
   }, [isName, isPhone, editModal, localValue, onSave])
 
-  // 🛠️ NOVA FUNÇÃO: Transforma a imagem selecionada do celular/PC em string Base64
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -107,7 +160,7 @@ const EditModal = memo(function EditModal({
     const reader = new FileReader()
     reader.onloadend = () => {
       const base64String = reader.result as string
-      onSave("avatar_url", base64String) // Envia a string da imagem direto para salvar
+      onSave("avatar_url", base64String)
     }
     reader.readAsDataURL(file)
   }
@@ -134,7 +187,6 @@ const EditModal = memo(function EditModal({
               )}
             </div>
             
-            {/* 🛠️ ALTERADO: Botão virou um label com input file escondido dentro */}
             <label className="w-full bg-amber-500 text-black font-medium py-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-amber-600 transition-colors">
               <Camera className="w-5 h-5" />
               {isSaving ? "Enviando..." : "Escolher foto da galeria"}
@@ -195,6 +247,7 @@ const EditModal = memo(function EditModal({
 
 // ── Componente principal de perfil ──
 export default function ProfilePage() {
+  const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [notifications, setNotifications] = useState({
@@ -203,6 +256,7 @@ export default function ProfilePage() {
     news: true,
   })
   const [editModal, setEditModal] = useState<null | "name" | "phone" | "photo">(null)
+  const [legalModalType, setLegalModalType] = useState<"terms" | "privacy" | null>(null)
   const [editValue, setEditValue] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -233,8 +287,6 @@ export default function ProfilePage() {
 
     loadProfileData()
   }, [])
-
-  // 🛠️ DELETADO: O gerador de link aleatório (bonecos) do dicebear foi removido daqui!
 
   const handleSaveField = useCallback(
     async (field: "name" | "phone" | "avatar_url", value: string) => {
@@ -347,7 +399,6 @@ export default function ProfilePage() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-32 space-y-4">
-        {/* ... Restante do HTML idêntico ao seu ... */}
         <div className="bg-neutral-900 rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-white/10">
             <h2 className="text-white font-medium flex items-center gap-2">
@@ -421,7 +472,7 @@ export default function ProfilePage() {
             icon={<Calendar className="w-5 h-5 text-white/60" />}
             title="Ver todos os agendamentos"
             subtitle={`${totalCuts} registros`}
-            onClick={() => (window.location.href = "/appointments")}
+            onClick={() => router.push("/appointments")}
           />
         </div>
 
@@ -477,12 +528,12 @@ export default function ProfilePage() {
             <MenuItem
               icon={<FileText className="w-5 h-5 text-white/60" />}
               title="Termos de Uso"
-              onClick={() => alert("Termos de uso da Street Hair")}
+              onClick={() => setLegalModalType("terms")}
             />
             <MenuItem
               icon={<Shield className="w-5 h-5 text-white/60" />}
               title="Política de Privacidade"
-              onClick={() => alert("Como protegemos seus dados")}
+              onClick={() => setLegalModalType("privacy")}
             />
             <MenuItem
               icon={<LogOut className="w-5 h-5 text-red-400" />}
@@ -506,6 +557,13 @@ export default function ProfilePage() {
         onClose={handleCloseModal}
         onSave={handleSaveField}
         onChangeValue={handleChangeValue}
+      />
+
+      {/* Janela de Termos / Privacidade controlada por state local */}
+      <LegalModal
+        isOpen={legalModalType !== null}
+        type={legalModalType}
+        onClose={() => setLegalModalType(null)}
       />
     </main>
   )
