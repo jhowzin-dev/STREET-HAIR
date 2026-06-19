@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
 import { format, startOfDay, addDays, isToday, isBefore } from "date-fns"
@@ -17,13 +17,12 @@ import { getServices } from "@/lib/actions/services"
 import type { Professional, Service } from "@/domain/entities"
 import { formatCurrency } from "@/lib/formatters"
 
-// Gera horários de 40 em 40 minutos
 const generateTimeSlots = (): string[] => {
   const slots: string[] = []
   let hour = 9
   let minute = 0
 
-  while (hour < 19 || (hour === 19 && minute <= 30)) {
+  while (hour < 19 || (hour === 19 && minute <= 40)) {
     slots.push(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`)
     minute += 40
     if (minute >= 60) {
@@ -60,14 +59,12 @@ export default function BookingPage() {
 
   const timeSlotsRef = useRef<HTMLDivElement>(null)
 
-  // Sincroniza o mês do calendário
   useEffect(() => {
     if (selectedDate) {
       setCalendarMonth(selectedDate)
     }
   }, [selectedDate])
 
- 
   useEffect(() => {
     if (selectedDate && timeSlotsRef.current && showTimeSlots) {
       setTimeout(() => {
@@ -79,7 +76,6 @@ export default function BookingPage() {
     }
   }, [selectedDate, showTimeSlots])
 
-  // Carrega profissionais e serviços ao montar
   useEffect(() => {
     getProfessionals()
       .then((data) => {
@@ -96,7 +92,6 @@ export default function BookingPage() {
       .catch(console.error)
   }, [])
 
-  // Busca horários ocupados quando a data mudar
   useEffect(() => {
     if (!selectedDate) {
       setBookedSlots([])
@@ -151,7 +146,6 @@ export default function BookingPage() {
     setExpandedSection(expandedSection === section ? null : section)
   }
 
-  // Filtra e computa os horários válidos na tela de forma otimizada
   const availableSlots = useMemo(() => {
     if (!selectedDate) return []
 
@@ -159,7 +153,6 @@ export default function BookingPage() {
     const currentIsToday = isToday(selectedDate)
 
     return allSlots.filter((time) => {
-      // 1. Validar se o horário já passou (caso seja hoje)
       if (currentIsToday) {
         const [hourStr, minuteStr] = time.split(":")
         const slotDateTime = new Date(now)
@@ -170,7 +163,6 @@ export default function BookingPage() {
         }
       }
 
-      // 2. Validar se o horário já está agendado/ocupado no banco
       const isBooked = bookedSlots.some((slot) => {
         if (selectedBarber && selectedBarber !== "any" && slot.professional_id) {
           return slot.appointment_time === time && slot.professional_id === selectedBarber
@@ -321,7 +313,12 @@ export default function BookingPage() {
                     month={calendarMonth}
                     onMonthChange={setCalendarMonth}
                     fixedWeeks
-                    disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
+                    // Desativa os dias passados, domingos (0) e segundas (1)
+                    // Mas NÃO esconde eles da tela! Vão ficar cinzas e não-clicáveis.
+                    disabled={(date) => {
+                      const day = date.getDay()
+                      return isBefore(startOfDay(date), startOfDay(new Date())) || day === 0 || day === 1
+                    }}
                     className="p-0"
                   />
                 </CardContent>
@@ -331,21 +328,27 @@ export default function BookingPage() {
                     { label: "Amanhã", value: 1 },
                     { label: "3 dias", value: 3 },
                     { label: "1 semana", value: 7 },
-                  ].map((preset) => (
-                    <Button
-                      key={preset.value}
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 bg-neutral-700 border-white/20 text-white hover:bg-neutral-600 text-xs"
-                      onClick={() => {
-                        const newDate = addDays(new Date(), preset.value)
-                        setSelectedDate(newDate)
-                        setSelectedTime(null)
-                      }}
-                    >
-                      {preset.label}
-                    </Button>
-                  ))}
+                  ].map((preset) => {
+                    const targetDate = addDays(new Date(), preset.value)
+                    const day = targetDate.getDay()
+                    const isInvalidDay = day === 0 || day === 1
+
+                    return (
+                      <Button
+                        key={preset.value}
+                        variant="outline"
+                        size="sm"
+                        disabled={isInvalidDay}
+                        className="flex-1 bg-neutral-700 border-white/20 text-white hover:bg-neutral-600 text-xs disabled:opacity-30"
+                        onClick={() => {
+                          setSelectedDate(targetDate)
+                          setSelectedTime(null)
+                        }}
+                      >
+                        {preset.label}
+                      </Button>
+                    )
+                  })}
                 </CardFooter>
               </Card>
 
@@ -397,7 +400,7 @@ export default function BookingPage() {
   )
 }
 
-/* --- Sub-components --- */
+/* --- Sub-components (BarberCard, NoPreferenceCard, ServiceCard, TimeSlotsSection) permanecem iguais ao código anterior --- */
 interface BarberCardProps {
   barber: Professional
   index: number
@@ -424,19 +427,16 @@ function BarberCard({ barber, isSelected, onSelect }: BarberCardProps) {
         <img 
           src={imageSrc} 
           alt={barber.name} 
-          className="w-full h-full object-cover object-[center_20%]" // Mantém as duas fotos centralizadas na mesma altura
+          className="w-full h-full object-cover object-[center_20%]"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
             const fallback = e.currentTarget.nextElementSibling as HTMLElement;
             if (fallback) fallback.style.display = 'flex';
           }}
         />
-
-        {/* Fallback cinza reserva */}
         <div className="hidden w-full h-full bg-neutral-700 items-center justify-center text-white/30 text-[10px] text-center p-1 font-medium uppercase">
           {firstName}
         </div>
-
         {isSelected && (
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
             <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
@@ -445,11 +445,7 @@ function BarberCard({ barber, isSelected, onSelect }: BarberCardProps) {
           </div>
         )}
       </div>
-      <span
-        className={`text-xs text-center leading-tight ${
-          isSelected ? "text-white font-medium" : "text-white/70"
-        }`}
-      >
+      <span className={`text-xs text-center leading-tight ${isSelected ? "text-white font-medium" : "text-white/70"}`}>
         {barber.name}
       </span>
     </div>
@@ -465,9 +461,7 @@ function NoPreferenceCard({ isSelected, onSelect }: NoPreferenceCardProps) {
   return (
     <div
       onClick={onSelect}
-      className={`flex flex-col items-center gap-2 cursor-pointer transition-all ${
-        isSelected ? "scale-105" : ""
-      }`}
+      className={`flex flex-col items-center gap-2 cursor-pointer transition-all ${isSelected ? "scale-105" : ""}`}
     >
       <div
         className={`w-full aspect-square rounded-xl overflow-hidden relative bg-neutral-600 flex items-center justify-center ${
@@ -521,17 +515,11 @@ function ServiceCard({ service, isSelected, onToggle }: ServiceCardProps) {
         <div className="flex items-center gap-2 mt-1">
           <span className="font-medium">{formatCurrency(service.price)}</span>
           {service.original_price && (
-            <span className="text-white/40 text-xs line-through">
-              {formatCurrency(service.original_price)}
-            </span>
+            <span className="text-white/40 text-xs line-through">{formatCurrency(service.original_price)}</span>
           )}
         </div>
       </div>
-      <div
-        className={`w-5 h-5 rounded-full border-2 ${
-          isSelected ? "border-black bg-black" : "border-white/50"
-        }`}
-      >
+      <div className={`w-5 h-5 rounded-full border-2 ${isSelected ? "border-black bg-black" : "border-white/50"}`}>
         {isSelected && (
           <div className="w-full h-full flex items-center justify-center">
             <div className="w-2 h-2 rounded-full bg-white" />
