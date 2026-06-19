@@ -78,42 +78,34 @@ function Calendar({
           months: "flex flex-col items-center justify-center w-full",
           month: "space-y-4 w-full flex flex-col items-center",
 
-          caption: "hidden",
+          month_caption: "hidden",
           caption_label: "hidden",
 
           nav: "hidden",
-          nav_button:
-            "h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 text-white absolute",
-          nav_button_previous: "left-1",
-          nav_button_next: "right-1",
-          
-          table: "w-full border-collapse space-y-1",
 
-          head_row: "flex justify-between w-full px-1",
-          head_cell:
+          month_grid: "w-full border-collapse space-y-1",
+
+          weekdays: "flex justify-between w-full px-1",
+          weekday:
             "text-neutral-400 rounded-md w-9 font-semibold text-[0.8rem] text-center uppercase tracking-wider",
 
-          row: "flex w-full justify-between mt-2 px-1",
+          week: "flex w-full justify-between mt-2 px-1",
 
-          cell:
-            "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-neutral-800 rounded-md",
+          day: "h-9 w-9 text-center text-sm p-0 relative flex items-center justify-center font-normal text-white hover:bg-neutral-800 rounded-md transition-all cursor-pointer select-none",
 
-          day:
-            "h-9 w-9 p-0 font-normal text-white hover:bg-neutral-800 rounded-md data-[disabled]:text-neutral-700 data-[disabled]:opacity-25 data-[disabled]:pointer-events-none transition-all",
+          selected:
+            "bg-white !text-black hover:bg-white hover:!text-black font-semibold shadow-lg shadow-white/10 rounded-md",
 
-          day_selected:
-            "bg-white text-black hover:bg-white hover:text-black font-semibold shadow-lg shadow-white/10",
-
-          day_today:
+          today:
             "border border-white/30 font-medium text-amber-400",
 
-          day_outside:
+          outside:
             "text-neutral-600 opacity-50",
 
-          day_disabled:
-            "text-neutral-500 opacity-25 pointer-events-none data-[disabled]:text-neutral-600",
+          disabled:
+            "text-neutral-700 opacity-25 pointer-events-none",
 
-          day_hidden: "invisible",
+          hidden: "invisible",
         }}
         components={{
           Chevron: (props: {
