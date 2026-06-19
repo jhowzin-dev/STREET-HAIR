@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback, memo } from "react"
 import { User, Calendar, Scissors, Bell, ChevronRight, FileText, Shield, Camera, X, Check, LogOut } from "lucide-react"
@@ -22,7 +22,6 @@ const NameInput = memo(function NameInput({
 }) {
   const [value, setValue] = useState(initialValue)
 
-  // Sincroniza com valor externo apenas na montagem
   useEffect(() => {
     setValue(initialValue)
   }, [initialValue])
@@ -60,7 +59,6 @@ interface EditModalProps {
   onClose: () => void
   onSave: (field: "name" | "phone" | "avatar_url", value: string) => void
   onChangeValue: (value: string) => void
-  onPhotoUpload: () => void
 }
 
 const EditModal = memo(function EditModal({
@@ -71,12 +69,9 @@ const EditModal = memo(function EditModal({
   onClose,
   onSave,
   onChangeValue,
-  onPhotoUpload,
 }: EditModalProps) {
-  // State local isolado para nao re-renderizar a pagina inteira no onChange
   const [localValue, setLocalValue] = useState(externalEditValue)
 
-  // Sincroniza valor externo apenas quando o modal abre/fecha
   useEffect(() => {
     setLocalValue(externalEditValue)
   }, [externalEditValue, editModal])
@@ -104,6 +99,19 @@ const EditModal = memo(function EditModal({
     }
   }, [isName, isPhone, editModal, localValue, onSave])
 
+  // 🛠️ NOVA FUNÇÃO: Transforma a imagem selecionada do celular/PC em string Base64
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64String = reader.result as string
+      onSave("avatar_url", base64String) // Envia a string da imagem direto para salvar
+    }
+    reader.readAsDataURL(file)
+  }
+
   if (!editModal) return null
 
   return (
@@ -125,13 +133,20 @@ const EditModal = memo(function EditModal({
                 <User className="w-16 h-16 text-white/40" />
               )}
             </div>
-            <button
-              onClick={onPhotoUpload}
-              className="w-full bg-amber-500 text-black font-medium py-4 rounded-xl flex items-center justify-center gap-2"
-            >
+            
+            {/* 🛠️ ALTERADO: Botão virou um label com input file escondido dentro */}
+            <label className="w-full bg-amber-500 text-black font-medium py-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-amber-600 transition-colors">
               <Camera className="w-5 h-5" />
-              Escolher nova foto
-            </button>
+              {isSaving ? "Enviando..." : "Escolher foto da galeria"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={isSaving}
+                onChange={handleFileChange}
+              />
+            </label>
+
             {profile?.avatar_url && (
               <button
                 onClick={() => onSave("avatar_url", "")}
@@ -196,7 +211,6 @@ export default function ProfilePage() {
     async function loadProfileData() {
       try {
         const user = await getCurrentUser()
-        // Middleware já garante que usuário está logado, mas mantém check básico
         if (!user) return
 
         const [profileData, appointmentsData] = await Promise.all([getProfile(), getAppointments()])
@@ -220,16 +234,7 @@ export default function ProfilePage() {
     loadProfileData()
   }, [])
 
-  const handlePhotoUpload = useCallback(() => {
-    const photos = [
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka",
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Zack",
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=Bella",
-    ]
-    const randomPhoto = photos[Math.floor(Math.random() * photos.length)]
-    handleSaveField("avatar_url", randomPhoto)
-  }, [])
+  // 🛠️ DELETADO: O gerador de link aleatório (bonecos) do dicebear foi removido daqui!
 
   const handleSaveField = useCallback(
     async (field: "name" | "phone" | "avatar_url", value: string) => {
@@ -237,10 +242,8 @@ export default function ProfilePage() {
       try {
         const updates: Partial<Pick<UserProfile, "full_name" | "phone" | "avatar_url">> = {}
         if (field === "name") updates.full_name = value
-        if (field === "phone") updates.phone = value // 🛠️ CORREÇÃO: Mudado de 'else' para 'if' explícito para não misturar os campos
-        if (field === "avatar_url") {
-          if (value) updates.avatar_url = value
-        }
+        if (field === "phone") updates.phone = value
+        if (field === "avatar_url") updates.avatar_url = value
 
         await updateProfile(updates)
         setProfile((prev) => (prev ? { ...prev, ...updates } : null))
@@ -277,14 +280,14 @@ export default function ProfilePage() {
   const lastCut = appointments[appointments.length - 1]
 
   interface MenuItemProps {
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  onClick: () => void;
-  danger?: boolean;
-}
+    icon: React.ReactNode;
+    title: string;
+    subtitle?: string;
+    onClick: () => void;
+    danger?: boolean;
+  }
 
-const MenuItem = ({ icon, title, subtitle, onClick, danger = false }: MenuItemProps) => (
+  const MenuItem = ({ icon, title, subtitle, onClick, danger = false }: MenuItemProps) => (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors ${danger ? "text-red-400" : ""}`}
@@ -301,11 +304,11 @@ const MenuItem = ({ icon, title, subtitle, onClick, danger = false }: MenuItemPr
   )
 
   interface ToggleProps {
-  checked: boolean;
-  onChange: () => void;
-}
+    checked: boolean;
+    onChange: () => void;
+  }
 
-const Toggle = ({ checked, onChange }: ToggleProps) => (
+  const Toggle = ({ checked, onChange }: ToggleProps) => (
     <button
       onClick={onChange}
       className={`w-12 h-6 rounded-full transition-colors ${checked ? "bg-amber-500" : "bg-neutral-700"}`}
@@ -344,6 +347,7 @@ const Toggle = ({ checked, onChange }: ToggleProps) => (
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-32 space-y-4">
+        {/* ... Restante do HTML idêntico ao seu ... */}
         <div className="bg-neutral-900 rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-white/10">
             <h2 className="text-white font-medium flex items-center gap-2">
@@ -502,7 +506,6 @@ const Toggle = ({ checked, onChange }: ToggleProps) => (
         onClose={handleCloseModal}
         onSave={handleSaveField}
         onChangeValue={handleChangeValue}
-        onPhotoUpload={handlePhotoUpload}
       />
     </main>
   )
