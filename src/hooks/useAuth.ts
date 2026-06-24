@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { signIn, signUp, signInWithGoogle, signOut } from "@/lib/actions/auth"
+import { signIn, signUp, signInWithGoogle } from "@/lib/actions/auth"
+import { createClient } from "@/core/utils/supabase"
 import { verifyEmailOtp, resendEmailOtp } from "@/lib/actions/email-verification"
 import { getCurrentUserRole } from "@/lib/actions/admin"
 
@@ -131,12 +132,20 @@ export function useAuth(): UseAuthReturn {
   }, [])
 
 const handleLogout = useCallback(async () => {
+  setIsLoading(true)
+  setError("")
   try {
-    await signOut()
+    const supabase = createClient()
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+    router.push("/auth")
+    router.refresh()
   } catch (err) {
     setError(err instanceof Error ? err.message : "Erro ao sair")
+  } finally {
+    setIsLoading(false)
   }
-}, [])
+}, [router])
 
   const checkAdminRole = useCallback(async (): Promise<boolean> => {
     try {
