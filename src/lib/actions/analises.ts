@@ -4,12 +4,11 @@ import { createClient } from "@/core/utils/supabase-server"
 import type { Appointment } from "@/domain/entities"
 
 export interface AppointmentWithClient extends Appointment {
-  client_name: string // <-- Alterado de string | null para string
+  client_name: string 
   client_phone: string | null
 }
 
-//Busca TODOS os agendamentos com dados do cliente (profiles).
-
+// Busca todos os agendamentos incluindo dados do cliente (profiles)
 export async function getAllAppointmentsWithClients(): Promise<AppointmentWithClient[]> {
   const supabase = await createClient()
 
@@ -24,7 +23,7 @@ export async function getAllAppointmentsWithClients(): Promise<AppointmentWithCl
 
   if (error) throw new Error(error.message)
 
-  // Busca nomes dos clientes via profiles
+  // Busca nomes dos clientes a partir da tabela profiles
   const appointments = data || []
   const userIds = [...new Set(appointments.map((a) => a.user_id))]
 
@@ -38,13 +37,13 @@ export async function getAllAppointmentsWithClients(): Promise<AppointmentWithCl
   return appointments.map((a) => ({
     ...a,
     professional: a.professional || null,
-    // Se o full_name for nulo ou não encontrar o profile, joga a string padrão para satisfazer o tipo
+    // Caso o full_name esteja ausente, utiliza string padrão 'Cliente sem nome' para garantir a consistência de tipos
     client_name: profileMap.get(a.user_id)?.full_name || "Cliente sem nome", 
     client_phone: profileMap.get(a.user_id)?.phone || null,
   }))
 }
 
-//Marca um agendamento como concluído (completo).
+// Marca um agendamento como concluído
 export async function markAppointmentAsCompleted(appointmentId: string) {
   const supabase = await createClient()
 

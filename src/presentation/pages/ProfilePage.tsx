@@ -476,6 +476,7 @@ export default function ProfilePage() {
           />
         </div>
 
+        {/* Notificações */}
         <div className="bg-neutral-900 rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-white/10">
             <h2 className="text-white font-medium flex items-center gap-2">

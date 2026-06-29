@@ -42,24 +42,6 @@ export function MenuSheet() {
   }, []);
 
   const baseItems: MenuItem[] = [
-   // {
-   //   icon: Info,
-   //   label: "Sobre Nós",
-   //   description: "Nossa história e valores",
-   //   onClick: () => {
-   //     router.push("/about?from=menu");
-   //     setIsOpen(false);
-   //   },
-   // },
-   // {
-   //   icon: Users,
-   //   label: "Nossa Equipe",
-   //   description: "Gabriel & Renan",
-   //   onClick: () => {
-   //     alert("Gabriel Barreto e Renan Amaral - Especialistas em cortes modernos e barbas tradicionais.");
-   //     setIsOpen(false);
-   //   },
-   // },
     {
       icon: MapPin,
       label: "Endereço",
@@ -78,15 +60,6 @@ export function MenuSheet() {
         setIsOpen(false);
       },
     },
-    //{
-    //  icon: Camera,
-    //  label: "Redes Sociais",
-    //  description: "@streethair",
-    //  onClick: () => {
-    //    window.open("https://instagram.com/streethair", "_blank");
-    //    setIsOpen(false);
-    //  },
-    //},
   ];
 
   const menuItems = [...baseItems];

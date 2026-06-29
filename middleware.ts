@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
 const AUTH_PATHS = ["/auth", "/auth/callback"]
-const ASSET_PATTERNS = ["/_next/", "/favicon.ico", "/logo.jpg", "/api/", "/assets/"]
+const ASSET_PATTERNS = ["/_next/", "/favicon.ico", "/logo.jpg", "/assets/"]
 
 function isAsset(path: string): boolean {
   return ASSET_PATTERNS.some((pattern) => path.startsWith(pattern))
@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
           response = NextResponse.next({
             request: { headers: request.headers },
           })
-          cookiesToSet.forEach(({ name, value, options }) => {
+          cookiesToSet.forEach(({ name, value, options }) => { if (!options?.sameSite) { options.sameSite = "strict"; }
             response.cookies.set(name, value, options)
           })
         },
@@ -49,8 +49,7 @@ export async function middleware(request: NextRequest) {
   const isConfirmPath = pathname === "/confirm"
   const PUBLIC_PATHS = ["/auth", "/auth/callback", "/confirm"]
 
-  // 1. Redirecionamento básico de sessão ativa/inativa
-  //    Permite que /confirm seja acessada SEM sessão (usuário digita o código)
+// Redirecionamento básico de sessão ativa/inativa: permite que /confirm seja acessada sem sessão (usuário digita o código)
   if (user && isAuthPath) {
     return NextResponse.redirect(new URL("/", request.url))
   }
@@ -59,13 +58,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth", request.url))
   }
 
-  // ── 2. VERIFICAÇÃO DE E-MAIL OBRIGATÓRIA ────────────────────────────
-  // Se usuário estiver logado mas não confirmou o e-mail, MANDA para /confirm
+// Verificação obrigatória de e‑mail: se o usuário estiver logado mas não confirmou, redireciona para /confirm
   if (user && !isAuthPath && !isConfirmPath) {
     try {
-      // Checa se o e-mail foi confirmado no Auth OU na tabela profiles
+      // Verifica se o e‑mail foi confirmado no Auth ou na tabela profiles
       const isVerified =
-        !!user.email_confirmed_at || // Supabase Auth nativo
+        !!user.email_confirmed_at || 
         (await supabase
           .from("profiles")
           .select("email_verified")
@@ -81,7 +79,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Se está na tela de confirmação e e-mail já está verificado, redireciona para home
+  // Tela de confirmação de e‑mail: se já está verificado, redireciona para a página inicial
   if (user && isConfirmPath) {
     try {
       const isVerified =
@@ -101,7 +99,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 3. Trava de segurança para obrigar o preenchimento do WhatsApp
+  // Validação obrigatória de telefone (WhatsApp): garante que o usuário tenha preenchido o campo antes de prosseguir
   if (user && pathname !== "/onboarding" && !isConfirmPath) {
     try {
       const { data: profile } = await supabase
@@ -118,7 +116,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 4. Se o usuário já tiver o telefone salvo e tentar acessar onboarding
+  // Bloqueio de acesso ao onboarding quando o telefone já está cadastrado: redireciona o usuário para a página inicial
   if (user && pathname === "/onboarding") {
     try {
       const { data: profile } = await supabase
@@ -135,7 +133,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 5. Proteção de rotas administrativas
+  // Proteção de rotas administrativas: garante que apenas usuários autenticados e com role 'admin' acessem rotas /admin
   if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") {
       return response
@@ -174,8 +172,7 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
-// ALTERADO: O matcher agora interceta de forma inteligente todas as páginas internas da aplicação,
-// garantindo que a verificação de e-mail, o onboarding e qualquer nova página criada fiquem protegidos automaticamente.
+// Arquitetura de roteamento: o matcher intercepta todas as rotas internas, garantindo proteção automática (verificação de e‑mail, onboarding etc.) para novas páginas
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api|auth|assets).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|assets).*)"]
 }

@@ -19,7 +19,7 @@ export function TopHeader({ showBack, backHref = "/" }: TopHeaderProps) {
         ) : (
           <MenuSheet />
         )}
-        {/* Logo da Barbearia - TAMANHO AJUSTÁVEL AQUI */}
+        {/* Logo da Barbearia */}
         <Link href="/" className="w-14 h-14   relative">
           <Image src="/logo.jpg" alt="Street Hair" fill className="object-contain" />
         </Link>

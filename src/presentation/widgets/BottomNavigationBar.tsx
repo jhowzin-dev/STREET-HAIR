@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Home, Scissors, Calendar, User } from "lucide-react";
 import Link from "next/link";
@@ -21,7 +21,6 @@ export function BottomNavigationBar() {
   const pathname = usePathname();
 
   return (
-    // Centralização perfeita usando left-1/2 e -translate-x-1/2 para evitar bugs no PC e Android
     <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full px-6 flex justify-center z-50 pointer-events-none">
       <div className="flex justify-around items-center w-full max-w-sm border border-white/10 rounded-[2.5rem] py-4 bg-black/80 backdrop-blur-md shadow-2xl pointer-events-auto">
         {navItems.map((item) => {

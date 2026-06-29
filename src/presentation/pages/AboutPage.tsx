@@ -21,9 +21,8 @@ import { TopHeader } from "../widgets/TopHeader"
 import { BottomNavigationBar } from "../widgets/BottomNavigationBar"
 import { cn } from "@/lib/utils"
 
-// ──────────────────────────────────────────
 // Types & Interfaces
-// ──────────────────────────────────────────
+
 interface SectionData {
   id: string
   icon: React.ReactNode
@@ -39,9 +38,7 @@ interface AccordionSectionProps {
   onClick: () => void
 }
 
-// ──────────────────────────────────────────
 // Accordion Section (Reusable)
-// ──────────────────────────────────────────
 function AccordionSection({
   icon,
   title,
@@ -85,9 +82,7 @@ function AccordionSection({
   )
 }
 
-// ──────────────────────────────────────────
 // Stat Card
-// ──────────────────────────────────────────
 function StatCard({ value, label, icon }: { value: string; label: string; icon: React.ReactNode }) {
   return (
     <div className="bg-neutral-900/80 rounded-xl p-4 border border-white/5 text-center">
@@ -98,9 +93,7 @@ function StatCard({ value, label, icon }: { value: string; label: string; icon: 
   )
 }
 
-// ──────────────────────────────────────────
 // Quick Info Card
-// ──────────────────────────────────────────
 function QuickInfoCard({
   icon,
   title,
@@ -124,9 +117,7 @@ function QuickInfoCard({
   )
 }
 
-// ──────────────────────────────────────────
 // Main Component
-// ──────────────────────────────────────────
 export default function AboutPage() {
   const [openSection, setOpenSection] = useState<string | null>("historia")
 

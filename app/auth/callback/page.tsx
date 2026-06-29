@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -14,7 +14,7 @@ export default function AuthCallbackPage() {
 
     async function checkAndRedirect(session: { user: { id: string } }) {
       try {
-        // Marca e-mail como verificado para usuários do Google (email já é verificado pelo provedor)
+        // Marca e-mail como verificado para usuários do Google 
         const { data: profile } = await supabase
           .from("profiles")
           .select("phone, email_verified")

@@ -1,9 +1,4 @@
-/**
- * Formata um número de telefone brasileiro
- * Aceita apenas os dígitos e aplica máscara
- * @param phone - Dígitos do telefone (apenas números)
- * @returns String formatada com máscara
- */
+// Formata um número de telefone brasileiro: aceita apenas os dígitos e aplica máscara
 export function formatPhoneNumber(phone: string): string {
   const digits = phone.replace(/\D/g, "")
 
@@ -23,16 +18,12 @@ export function formatPhoneNumber(phone: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`
 }
 
-/**
- * Remove a formatação e retorna apenas os dígitos
- */
+// Remove a formatação e retorna apenas os dígitos
 export function removePhoneMask(phone: string): string {
   return phone.replace(/\D/g, "")
 }
 
-/**
- * Verifica se um número de telefone é válido (11 dígitos = celular)
- */
+// Verifica se um número de telefone é válido (11 dígitos = celular)
 export function isPhoneValid(phone: string): boolean {
   const digits = removePhoneMask(phone)
   return digits.length === 11

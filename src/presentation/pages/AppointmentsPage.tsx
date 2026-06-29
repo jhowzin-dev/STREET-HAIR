@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
@@ -195,7 +195,6 @@ interface AppointmentCardProps {
 }
 
 function AppointmentCard({ appointment, isHistory, onDelete, isDeleting }: AppointmentCardProps) {
-  // CORREÇÃO DE TIMEZONE: Convertendo a string AAAA-MM-DD diretamente sem passar pelo fuso UTC bagunçado do JS
   const [year, month, day] = appointment.appointment_date.split("-")
   const dateStr = `${day}/${month}/${year}`
 

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useMemo, useEffect } from "react"
 import { cn } from "@/lib/utils"
@@ -96,13 +96,11 @@ export default function AdminDashboard({ appointments, stats }: Props) {
   }, [appointments, today])
 
   const sortedAppointments = useMemo(() => {
-    // Always sort by time ascending for the selected day
     return [...filteredAppointments].sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
   }, [filteredAppointments])
 
 
   // ---------- Histórico e Faturamento ----------
-  // Initialize month state (from URL or today)
   const [monthDate, setMonthDate] = useState(() => {
     const param = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("month") : null
     if (param) {
@@ -112,11 +110,9 @@ export default function AdminDashboard({ appointments, stats }: Props) {
     return new Date()
   })
 
-  // State for filter (default "todos")
   const [historyFilter, setHistoryFilter] = useState<"hoje" | "semana" | "mes" | "todos">("todos")
 
 
-  // Sync month, filter and barber to URL (shallow, keep scroll)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const monthParam = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`

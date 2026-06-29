@@ -4,11 +4,11 @@ import { createClient } from "@/core/utils/supabase-server"
 import type { Appointment } from "@/domain/entities"
 import { getToday } from "@/lib/formatters"
 
-// Busca TODOS os agendamentos.
+// Busca todos os agendamentos
 export async function getAllAppointments(): Promise<Appointment[]> {
   const supabase = await createClient()
 
-  // 1. Puxa os agendamentos normais com o nome do profissional
+  // Etapa 1: Busca os agendamentos normais incluindo o nome do profissional
   const { data, error } = await supabase
     .from("appointments")
     .select("*, professional:professionals (name)")
@@ -19,12 +19,12 @@ export async function getAllAppointments(): Promise<Appointment[]> {
 
   const appointments = data || []
   
-  // 2. Extrai os IDs únicos dos utilizadores que agendaram
+  // Etapa 2: Extrai os IDs únicos dos usuários que fizeram agendamentos
   const userIds = [...new Set(appointments.map((a) => a.user_id).filter(Boolean))]
 
   if (userIds.length === 0) return appointments
 
-  // 3. Busca os perfis correspondentes diretamente na tabela pública 'profiles'
+  // Etapa 3: Busca os perfis correspondentes na tabela pública 'profiles'
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, full_name, phone")
@@ -105,6 +105,8 @@ export async function getCurrentUserRole(): Promise<string> {
 
 // Delete a cancelled appointment (admin only).
 export async function deleteCancelledAppointment(appointmentId: string) {
+  const role = await getCurrentUserRole();
+  if (role !== "admin") throw new Error("Unauthorized: admin role required");
   const supabase = await createClient()
   
   const { data, error } = await supabase
@@ -126,6 +128,8 @@ export async function deleteCancelledAppointment(appointmentId: string) {
 
 // Revert appointment status (used to undo accidental changes)
 export async function revertAppointmentStatus(appointmentId: string, currentStatus: string) {
+  const role = await getCurrentUserRole();
+  if (role !== "admin") throw new Error("Unauthorized: admin role required");
   const supabase = await createClient()
   let newStatus: string
   if (currentStatus === 'completed' || currentStatus === 'canceled') {

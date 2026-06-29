@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { Clock, MapPin } from "lucide-react";
@@ -8,8 +8,6 @@ import { BottomNavigationBar } from "../widgets/BottomNavigationBar";
 
 export default function HomePage() {
   return (
-    // min-h-screen garante que o fundo preto cubra tudo, sem cortar ou revelar fundo cinza.
-    // pb-36 dá o espaço exato pro botão de Agendar nunca bater na barra inferior flutuante.
     <main className="min-h-screen w-full bg-black flex flex-col items-center justify-start pt-[env(safe-area-inset-top)] pb-36 px-4 relative overflow-x-hidden">
 
       <TopHeader />

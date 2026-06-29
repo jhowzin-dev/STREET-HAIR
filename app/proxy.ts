@@ -7,13 +7,13 @@ const AUTH_PATHS = ["/auth", "/auth/login", "/auth/register"]
 function isAsset(pathname: string) {
   return (
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
+    // pathname.startsWith("/api") ||
     pathname.includes(".") ||
     pathname === "/favicon.ico"
   )
 }
 
-// ALTERADO: O Next.js exige o nome "middleware" para funcionar nativamente
+// Arquitetura Next.js: o Next.js requer que o arquivo exporte uma função chamada "middleware"
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: { headers: request.headers },
@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
           response = NextResponse.next({
             request: { headers: request.headers },
           })
-          cookiesToSet.forEach(({ name, value, options }) => {
+          cookiesToSet.forEach(({ name, value, options }) => { if (!options?.sameSite) { options.sameSite = "strict"; }
             response.cookies.set(name, value, options)
           })
         },
@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const isAuthPath = pathname === "/auth" || AUTH_PATHS.some((p) => pathname.startsWith(p))
 
-  // Redirecionamento básico de sessão ativa/inativa
+  // Redirecionamento básico de sessão ativa/inativa: gerencia login e logout, redirecionando usuários conforme o estado da sessão
   if (user && isAuthPath) {
     return NextResponse.redirect(new URL("/", request.url))
   }
@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth", request.url))
   }
 
-  // Trava de segurança para obrigar o preenchimento do WhatsApp
+  // Validação obrigatória de telefone (WhatsApp): garante que o usuário tenha preenchido o campo de telefone antes de prosseguir
   if (user && pathname !== "/onboarding") {
     try {
       const { data: profile } = await supabase
@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
         .eq("id", user.id)
         .maybeSingle()
 
-      // ALTERADO: Proteção extra se o telefone vier como string vazia ("") do banco
+      // Proteção extra para telefone vazio: trata casos em que o telefone vem como string vazia do banco
       if (!profile?.phone || profile.phone.trim() === "") {
         return NextResponse.redirect(new URL("/onboarding", request.url))
       }
@@ -83,7 +83,7 @@ export async function middleware(request: NextRequest) {
         .eq("id", user.id)
         .maybeSingle()
 
-      // ALTERADO: Validação consistente com a de cima
+      // Validação consistente para o telefone ao acessar onboarding: garante comportamento simétrico ao da verificação anterior
       if (profile?.phone && profile.phone.trim() !== "") {
         return NextResponse.redirect(new URL("/", request.url))
       }
@@ -92,7 +92,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Proteção de rotas administrativas
+  // Proteção de rotas administrativas: restringe acesso a rotas /admin a usuários com role 'admin'
   if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") return response
     if (!user) return NextResponse.redirect(new URL("/auth", request.url))
@@ -121,5 +121,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api|auth).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|auth).*)"]
 }
